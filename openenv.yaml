@@ -1,0 +1,137 @@
+name: school-timetable-env
+version: "1.0.0"
+description: >
+  A realistic simulation of a school administrator building a conflict-free
+  weekly timetable. The agent assigns subjects to divisions, allocates faculty
+  and rooms, resolves scheduling conflicts, and optimizes resource usage.
+
+author: OpenEnv Hackathon Team
+category: real-world / planning / optimization
+
+interface:
+  reset: "env.reset() -> Observation"
+  step: "env.step(action: Action) -> StepResult(observation, reward, done, info)"
+  state: "env.state() -> Observation"
+
+action_space:
+  type: structured
+  actions:
+    - name: assign_class
+      description: Assign a subject to a division in a given slot with faculty and room
+      fields:
+        - division_id: string
+        - subject_id: string
+        - faculty_id: string
+        - room_id: string
+        - slot_id: string
+
+    - name: reschedule_class
+      description: Move an existing class entry to a new slot (optionally changing room/faculty)
+      fields:
+        - entry_id: string
+        - new_slot_id: string
+        - new_room_id: string (optional)
+        - new_faculty_id: string (optional)
+
+    - name: remove_assignment
+      description: Remove an existing timetable entry
+      fields:
+        - entry_id: string
+
+observation_space:
+  type: structured
+  fields:
+    - step_count: integer
+    - timetable_entries: list of TimetableEntry
+    - progress:
+        total_required_sessions: integer
+        assigned_sessions: integer
+        completion_percentage: float
+        divisions_complete: list[string]
+        divisions_pending: list[string]
+    - resource_utilization:
+        faculty_utilization: dict[faculty_id, float]
+        room_utilization: dict[room_id, float]
+        slot_utilization: float
+    - recent_violations: list[ConstraintViolation]
+    - available_actions_hint:
+        pending_work: list[dict]
+        faculty_status: list[dict]
+        room_status: list[dict]
+    - is_terminal: boolean
+    - termination_reason: string or null
+
+reward:
+  type: dense
+  step_rewards:
+    valid_assignment: +0.20
+    invalid_conflict: -0.30
+    efficient_decision: +0.10
+    redundant_action: -0.10
+    reschedule_bonus: +0.05
+  final_score:
+    range: [0.0, 1.0]
+    weights:
+      completeness: 0.50
+      no_conflicts: 0.30
+      efficiency: 0.20
+
+constraints:
+  - teacher_double_booking: "Faculty cannot teach two classes in the same slot"
+  - room_double_booking: "A room cannot host two classes in the same slot"
+  - faculty_availability: "Faculty can only teach in their declared available slots"
+  - subject_faculty_match: "Faculty can only teach subjects they are qualified for"
+  - lab_requirement: "Lab subjects must use lab rooms; theory must use classrooms"
+  - workload_limit: "Faculty cannot exceed their declared max_workload per week"
+  - division_slot_conflict: "A division can only have one class per slot"
+
+termination:
+  - reason: complete
+    condition: All required sessions for all divisions have been assigned
+  - reason: max_steps
+    condition: Step count exceeds config.max_steps
+  - reason: too_many_invalid
+    condition: Invalid action count exceeds config.max_invalid_actions
+
+tasks:
+  - id: easy
+    difficulty: green
+    description: Single division, 4 subjects, 3 faculty, 2 classrooms. No lab.
+    max_steps: 60
+    target_score: 0.90
+
+  - id: medium
+    difficulty: yellow
+    description: Two divisions, 1 lab subject, 5 faculty with limited availability.
+    max_steps: 150
+    target_score: 0.80
+
+  - id: hard
+    difficulty: red
+    description: Three divisions, 2 lab subjects, 8 faculty with uneven availability and workload optimization.
+    max_steps: 300
+    target_score: 0.70
+
+exports:
+  - format: csv
+    function: export_faculty_timetable_csv(faculty_name, entries, config)
+    description: Per-faculty timetable as CSV
+  - format: csv
+    function: export_master_timetable_csv(entries, config)
+    description: Full master timetable as CSV
+  - format: pdf
+    function: export_faculty_timetable_pdf(faculty_name, entries, config, path)
+    description: Per-faculty timetable as PDF (requires reportlab)
+
+email:
+  function: send_faculty_email(faculty_name, entries, config)
+  description: Send formatted timetable + CSV attachment to a faculty member
+
+dependencies:
+  required:
+    - pydantic>=2.0
+    - openai>=1.0
+  optional:
+    - reportlab  # for PDF export
+
+python_version: ">=3.10"

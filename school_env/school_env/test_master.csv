@@ -1,0 +1,4 @@
+entry_id,slot_id,day,period,division,subject,faculty,room
+c1ccbc0a,Mon-1,Mon,1,Semester 1 – Division A,Mathematics,Dr. Sharma,CR101
+edc38455,Mon-2,Mon,2,Semester 1 – Division A,English,Prof. Mehta,CR102
+c2a36614,Tue-1,Tue,1,Semester 1 – Division A,Science,Ms. Patel,CR101

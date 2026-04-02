@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Timetable Generator</title>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;--accent:#6c63ff;--accent2:#00d4aa;--danger:#ff4d6d;--warn:#ffb347;--text:#e8eaf6;--muted:#7b82a8;--green:#4caf82;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:16px}
+header h1{font-size:18px;font-weight:700;color:var(--accent)}
+header a{color:var(--muted);font-size:13px;text-decoration:none;margin-left:auto}
+header a:hover{color:var(--accent2)}
+.container{max-width:1200px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:18px}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px}
+.fg.w2{flex:2}
+label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+input,select{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;width:100%;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+input[type=number]{-moz-appearance:textfield}
+.days-grid{display:flex;gap:8px;flex-wrap:wrap}
+.day-cb{display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;user-select:none;transition:all .15s}
+.day-cb:hover{border-color:var(--accent)}
+.day-cb.checked{background:var(--accent);border-color:var(--accent);color:#fff}
+.day-cb input{display:none}
+.btn{padding:9px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.88}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover{opacity:.88}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent2);color:var(--accent2)}
+.btn-danger-sm{background:rgba(255,77,109,.15);border:1px solid rgba(255,77,109,.3);color:var(--danger);padding:4px 8px;font-size:11px;border-radius:4px;cursor:pointer}
+.btn-danger-sm:hover{background:rgba(255,77,109,.3)}
+/* Subject rows */
+.subj-list{display:flex;flex-direction:column;gap:10px}
+.subj-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.subj-row .fg{min-width:120px}
+.faculty-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.ftag{background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:3px 10px;font-size:12px;display:flex;align-items:center;gap:6px}
+.ftag button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0}
+.ftag button:hover{color:var(--danger)}
+.add-fac-row{display:flex;gap:6px;margin-top:6px}
+.add-fac-row input{flex:1}
+/* Timetable output */
+.tt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tt-tab{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+.tt-tab:hover{border-color:var(--accent)}
+.tt-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tt-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--surface);color:var(--muted);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.06em;padding:8px 10px;border:1px solid var(--border);white-space:nowrap}
+td{padding:7px 10px;border:1px solid var(--border);vertical-align:middle;min-width:100px}
+.cell-break{background:rgba(255,179,71,.1);color:var(--warn);font-weight:700;text-align:center;font-size:11px}
+.cell-free{color:var(--border);text-align:center;font-size:11px}
+.cell-class{border-radius:5px;padding:4px 8px;font-size:11px;font-weight:600;display:inline-block}
+.cell-slot{color:var(--muted);font-weight:700;font-size:11px;white-space:nowrap}
+.download-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.warn-box{background:rgba(255,179,71,.1);border:1px solid rgba(255,179,71,.3);border-radius:8px;padding:12px;font-size:12px;color:var(--warn)}
+.warn-box strong{display:block;margin-bottom:4px}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;font-size:13px;max-width:340px;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;z-index:999}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--danger);color:var(--danger)}
+#toast.warn{border-color:var(--warn);color:var(--warn)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>📅 Timetable Generator</h1>
+  <span style="color:var(--muted);font-size:13px">Auto-generate conflict-free class timetables</span>
+  <a href="/">← Back to Env Demo</a>
+</header>
+
+<div class="container">
+
+<!-- ── Step 1: Basic Info ── -->
+<div class="card">
+  <div class="card-title">Step 1 — Class Info</div>
+  <div class="row">
+    <div class="fg w2">
+      <label>Class / Standard Name</label>
+      <input id="class-name" type="text" placeholder="e.g. Class 10, Semester 3" value="Class 10"/>
+    </div>
+    <div class="fg">
+      <label>Number of Divisions</label>
+      <input id="num-divs" type="number" min="1" max="10" value="3"/>
+    </div>
+    <div class="fg">
+      <label>Periods per Day</label>
+      <input id="periods-per-day" type="number" min="4" max="12" value="7"/>
+    </div>
+    <div class="fg">
+      <label>Break After Period #</label>
+      <input id="break-period" type="number" min="1" max="12" value="4"/>
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <label style="display:block;margin-bottom:8px">Working Days</label>
+    <div class="days-grid" id="days-grid">
+      <label class="day-cb checked" data-day="Mon"><input type="checkbox" checked/>Mon</label>
+      <label class="day-cb checked" data-day="Tue"><input type="checkbox" checked/>Tue</label>
+      <label class="day-cb checked" data-day="Wed"><input type="checkbox" checked/>Wed</label>
+      <label class="day-cb checked" data-day="Thu"><input type="checkbox" checked/>Thu</label>
+      <label class="day-cb checked" data-day="Fri"><input type="checkbox" checked/>Fri</label>
+      <label class="day-cb" data-day="Sat"><input type="checkbox"/>Sat</label>
+    </div>
+  </div>
+</div>
+
+<!-- ── Step 2: Subjects & Faculty ── -->
+<div class="card">
+  <div class="card-title">Step 2 — Subjects &amp; Faculty</div>
+  <div class="subj-list" id="subj-list"></div>
+  <button class="btn btn-outline" id="add-subj-btn" style="margin-top:12px">+ Add Subject</button>
+  <p style="color:var(--muted);font-size:11px;margin-top:8px">
+    💡 If a subject has <strong>one faculty</strong> → same teacher for all divisions (no clash guaranteed).<br>
+    If you add <strong>one faculty per division</strong> → each division gets their own teacher.
+  </p>
+</div>
+
+<!-- ── Generate ── -->
+<div style="display:flex;gap:12px;align-items:center">
+  <button class="btn btn-primary" id="generate-btn" style="padding:11px 28px;font-size:15px">⚡ Generate Timetable</button>
+  <span id="gen-status" style="color:var(--muted);font-size:13px"></span>
+</div>
+
+<!-- ── Output ── -->
+<div class="card hidden" id="output-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div class="card-title" style="margin-bottom:0">Generated Timetable</div>
+    <div class="download-row">
+      <button class="btn btn-success" id="dl-all-btn">⬇ Download All Faculty CSV</button>
+    </div>
+  </div>
+
+  <!-- Warnings -->
+  <div class="warn-box hidden" id="warn-box">
+    <strong>⚠ Some sessions could not be scheduled:</strong>
+    <div id="warn-list"></div>
+  </div>
+
+  <!-- Tabs: Division view + per-faculty view -->
+  <div class="tt-tabs" id="tt-tabs"></div>
+  <div class="tt-wrap" id="tt-wrap"></div>
+
+  <!-- Per-faculty download buttons -->
+  <div style="margin-top:16px">
+    <div class="card-title">Download Individual Faculty Timetables</div>
+    <div class="download-row" id="fac-dl-row"></div>
+  </div>
+</div>
+
+</div><!-- /container -->
+<div id="toast"></div>
+
+<script>
+// ── Palette ───────────────────────────────────────────────────
+const COLORS = ['#6c63ff','#00d4aa','#ffb347','#ff6b9d','#a78bfa','#38bdf8','#fb923c','#34d399'];
+let generatedData = null;
+let activeTab = null;
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, type='ok'){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show '+type;
+  clearTimeout(t._t); t._t = setTimeout(()=>t.className='', 3000);
+}
+
+// ── Day checkboxes ────────────────────────────────────────────
+document.querySelectorAll('.day-cb').forEach(lbl=>{
+  lbl.addEventListener('click', ()=>{
+    const cb = lbl.querySelector('input');
+    cb.checked = !cb.checked;
+    lbl.classList.toggle('checked', cb.checked);
+  });
+});
+
+// ── Subject management ────────────────────────────────────────
+let subjCount = 0;
+
+const DEFAULT_SUBJECTS = [
+  {name:'Mathematics', lec:5, fac:['Prof. Sharma']},
+  {name:'Physics',     lec:4, fac:['Dr. Mehta']},
+  {name:'Chemistry',   lec:4, fac:['Ms. Kapoor']},
+  {name:'English',     lec:3, fac:['Mr. Verma']},
+  {name:'History',     lec:3, fac:['Mrs. Singh']},
+];
+
+function addSubject(name='', lec=3, facList=[]){
+  const id = ++subjCount;
+  const div = document.createElement('div');
+  div.className = 'subj-row';
+  div.id = 'subj-'+id;
+  div.innerHTML = `
+    <div class="fg w2">
+      <label>Subject Name</label>
+      <input type="text" id="sname-${id}" placeholder="e.g. Mathematics" value="${name}"/>
+    </div>
+    <div class="fg" style="min-width:100px;max-width:120px">
+      <label>Lectures/Week</label>
+      <input type="number" id="slec-${id}" min="1" max="10" value="${lec}"/>
+    </div>
+    <div class="fg" style="flex:3">
+      <label>Faculty (one per line or comma-separated)</label>
+      <div class="faculty-tags" id="ftags-${id}"></div>
+      <div class="add-fac-row">
+        <input type="text" id="facinput-${id}" placeholder="Faculty name, press Enter"/>
+        <button class="btn btn-outline" style="white-space:nowrap;padding:7px 12px" onclick="addFacTag(${id})">Add</button>
+      </div>
+    </div>
+    <button class="btn-danger-sm" style="margin-top:20px" onclick="removeSubject(${id})">✕ Remove</button>
+  `;
+  document.getElementById('subj-list').appendChild(div);
+  facList.forEach(f=>addFacTagValue(id, f));
+  document.getElementById('facinput-'+id).addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); addFacTag(id); }
+  });
+}
+
+function addFacTag(id){
+  const inp = document.getElementById('facinput-'+id);
+  const names = inp.value.split(',').map(s=>s.trim()).filter(Boolean);
+  names.forEach(n=>addFacTagValue(id, n));
+  inp.value = '';
+}
+
+function addFacTagValue(id, name){
+  if(!name) return;
+  const container = document.getElementById('ftags-'+id);
+  // avoid duplicates
+  const existing = [...container.querySelectorAll('.ftag')].map(t=>t.dataset.name);
+  if(existing.includes(name)) return;
+  const tag = document.createElement('span');
+  tag.className = 'ftag'; tag.dataset.name = name;
+  tag.innerHTML = `${name}<button onclick="this.parentElement.remove()" title="Remove">×</button>`;
+  container.appendChild(tag);
+}
+
+function removeSubject(id){
+  document.getElementById('subj-'+id)?.remove();
+}
+
+function getSubjects(){
+  const rows = document.querySelectorAll('.subj-row');
+  const result = [];
+  rows.forEach(row=>{
+    const id = row.id.split('-')[1];
+    const name = document.getElementById('sname-'+id).value.trim();
+    const lec  = parseInt(document.getElementById('slec-'+id).value)||1;
+    const tags = [...document.querySelectorAll('#ftags-'+id+' .ftag')].map(t=>t.dataset.name);
+    if(name && tags.length) result.push({name, lectures_per_week:lec, faculty:tags});
+  });
+  return result;
+}
+
+// Load defaults
+DEFAULT_SUBJECTS.forEach(s=>addSubject(s.name, s.lec, s.fac));
+
+document.getElementById('add-subj-btn').addEventListener('click', ()=>addSubject());
+
+// ── Generate ──────────────────────────────────────────────────
+document.getElementById('generate-btn').addEventListener('click', async ()=>{
+  const className   = document.getElementById('class-name').value.trim()||'Class';
+  const numDivs     = parseInt(document.getElementById('num-divs').value)||1;
+  const ppd         = parseInt(document.getElementById('periods-per-day').value)||7;
+  const brk         = parseInt(document.getElementById('break-period').value)||4;
+  const workingDays = [...document.querySelectorAll('.day-cb.checked')].map(l=>l.dataset.day);
+  const subjects    = getSubjects();
+
+  if(!workingDays.length){ toast('Select at least one working day','warn'); return; }
+  if(!subjects.length){ toast('Add at least one subject with faculty','warn'); return; }
+  if(brk > ppd){ toast('Break period cannot exceed periods per day','warn'); return; }
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true; btn.textContent = '⏳ Generating...';
+  document.getElementById('gen-status').textContent = '';
+
+  try{
+    const res = await fetch('/api/generate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({class_name:className, num_divisions:numDivs, subjects, working_days:workingDays, periods_per_day:ppd, break_after_period:brk})
+    });
+    if(!res.ok){ const e=await res.json(); throw new Error(e.detail||'Server error'); }
+    generatedData = await res.json();
+    renderOutput(generatedData);
+    toast('Timetable generated successfully!','ok');
+    document.getElementById('gen-status').textContent = '✓ Done — '+generatedData.divisions.length+' divisions, '+Object.keys(generatedData.faculty_grids).length+' faculty';
+  } catch(e){
+    toast(e.message,'err');
+    document.getElementById('gen-status').textContent = '✗ '+e.message;
+  } finally{
+    btn.disabled=false; btn.textContent='⚡ Generate Timetable';
+  }
+});
+
+// ── Render output ─────────────────────────────────────────────
+function renderOutput(data){
+  document.getElementById('output-card').classList.remove('hidden');
+
+  // Warnings
+  const warnBox = document.getElementById('warn-box');
+  if(data.unresolved && data.unresolved.length){
+    warnBox.classList.remove('hidden');
+    document.getElementById('warn-list').innerHTML = data.unresolved.map(u=>
+      `<div>Div ${u.division} · ${u.subject} (${u.faculty}): scheduled ${u.assigned}/${u.needed} sessions</div>`
+    ).join('');
+  } else {
+    warnBox.classList.add('hidden');
+  }
+
+  // Build tabs: one per division + one per faculty
+  const tabs = document.getElementById('tt-tabs');
+  tabs.innerHTML = '';
+  const allTabs = [
+    ...data.divisions.map(d=>({id:'div-'+d, label:'Div '+d, type:'div', key:d})),
+    ...Object.keys(data.faculty_grids).map(f=>({id:'fac-'+f.replace(/\s/g,'_'), label:f, type:'fac', key:f})),
+  ];
+  allTabs.forEach((t,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'tt-tab'+(i===0?' active':'');
+    btn.textContent = t.label;
+    btn.dataset.tabid = t.id;
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tt-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTab = t;
+      renderTab(data, t);
+    });
+    tabs.appendChild(btn);
+  });
+
+  // Render first tab
+  activeTab = allTabs[0];
+  renderTab(data, allTabs[0]);
+
+  // Faculty download buttons
+  const facRow = document.getElementById('fac-dl-row');
+  facRow.innerHTML = '';
+  Object.keys(data.faculty_grids).forEach(fac=>{
+    const btn = document.createElement('a');
+    btn.href = '/api/download/faculty/'+encodeURIComponent(fac);
+    btn.download = '';
+    btn.className = 'btn btn-outline';
+    btn.style.fontSize = '12px';
+    btn.style.padding = '6px 12px';
+    btn.textContent = '⬇ '+fac;
+    facRow.appendChild(btn);
+  });
+
+  // Download all
+  document.getElementById('dl-all-btn').onclick = ()=>{ window.location='/api/download/all'; };
+
+  document.getElementById('output-card').scrollIntoView({behavior:'smooth'});
+}
+
+function renderTab(data, tab){
+  const wrap = document.getElementById('tt-wrap');
+  if(tab.type === 'div'){
+    renderDivisionTable(data, tab.key, wrap);
+  } else {
+    renderFacultyTable(data, tab.key, wrap);
+  }
+}
+
+function renderDivisionTable(data, divId, wrap){
+  const days = data.days;
+  const ppd  = data.periods_per_day;
+  const brk  = data.break_after_period;
+  const subjMap = {};
+  data.subjects.forEach((s,i)=>subjMap[s.name]=COLORS[i%COLORS.length]);
+
+  // Build lookup: day+period → {subject, faculty}
+  const lookup = {};
+  data.grid.filter(r=>r.division===divId).forEach(r=>{
+    lookup[r.day+'|'+r.period] = r;
+  });
+
+  let html = '<table><thead><tr><th>Period</th>';
+  days.forEach(d=>html+=`<th>${d}</th>`);
+  html += '</tr></thead><tbody>';
+
+  for(let p=1; p<=ppd; p++){
+    html += `<tr><td class="cell-slot">P${p}${p===brk?' 🍽':''}`;
+    if(p===brk) html += ' <span style="font-size:9px;color:var(--warn)">BREAK</span>';
+    html += '</td>';
+    days.forEach(d=>{
+      const key = d+'|'+p;
+      const r = lookup[key];
+      if(!r || r.subject==='FREE'){
+        html += `<td class="cell-free">—</td>`;
+      } else if(r.subject==='BREAK'){
+        html += `<td class="cell-break">☕ Break</td>`;
+      } else {
+        const color = subjMap[r.subject]||'var(--accent)';
+        html += `<td><span class="cell-class" style="background:${color}22;color:${color};border:1px solid ${color}44">
+          <strong>${r.subject}</strong><br>
+          <span style="font-size:10px;opacity:.8">${r.faculty||''}</span>
+        </span></td>`;
+      }
+    });
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderFacultyTable(data, facName, wrap){
+  const days = data.days;
+  const ppd  = data.periods_per_day;
+  const brk  = data.break_after_period;
+  const rows = data.faculty_grids[facName]||[];
+
+  // Build lookup: day+period → row
+  const lookup = {};
+  rows.forEach(r=>lookup[r.day+'|'+r.period]=r);
+
+  let html = '<table><thead><tr><th>Period</th>';
+  days.forEach(d=>html+=`<th>${d}</th>`);
+  html += '</tr></thead><tbody>';
+
+  for(let p=1; p<=ppd; p++){
+    html += `<tr><td class="cell-slot">P${p}${p===brk?' 🍽':''}</td>`;
+    days.forEach(d=>{
+      const r = lookup[d+'|'+p];
+      if(!r){ html+=`<td class="cell-free">—</td>`; return; }
+      if(r.is_break){ html+=`<td class="cell-break">☕ Break</td>`; return; }
+      if(!r.classes||!r.classes.length){ html+=`<td class="cell-free">Free</td>`; return; }
+      const chips = r.classes.map((c,i)=>{
+        const color = COLORS[i%COLORS.length];
+        return `<span class="cell-class" style="background:${color}22;color:${color};border:1px solid ${color}44;display:block;margin:2px 0">
+          <strong>${c.subject}</strong> — Div ${c.division}
+        </span>`;
+      }).join('');
+      html += `<td>${chips}</td>`;
+    });
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+</script>
+</body>
+</html>
