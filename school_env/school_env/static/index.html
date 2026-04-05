@@ -1,560 +1,426 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>School Timetable Scheduler</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>School Timetable Generator</title>
 <style>
-:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;--accent:#6c63ff;--accent2:#00d4aa;--danger:#ff4d6d;--warn:#ffb347;--text:#e8eaf6;--muted:#7b82a8;--green:#4caf82;--r:10px}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#080b14;--sf:#0f1320;--sf2:#161c2e;--sf3:#1d2540;
+  --bd:#252d45;--bd2:#2e3a5c;
+  --ac:#7c6fff;--ac2:#00e5b0;
+  --danger:#ff4d6d;--warn:#ffb347;--tx:#e8edf8;--mu:#6b7a9e;
+  --green:#3dd68c;--r:12px;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:16px}
-header h1{font-size:18px;font-weight:700;color:var(--accent)}
-header .sub{color:var(--muted);font-size:13px}
-.layout{display:grid;grid-template-columns:310px 1fr;height:calc(100vh - 53px);overflow:hidden}
-.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
-.main{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
-.card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px}
-.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
-.task-btns{display:flex;gap:8px}
-.task-btn{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;transition:all .15s}
-.task-btn:hover{border-color:var(--accent)}
-.task-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-.btn{padding:9px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s}
-.btn-primary{background:var(--accent);color:#fff;width:100%}
-.btn-primary:hover{opacity:.88}
-.btn-primary:disabled{opacity:.4;cursor:not-allowed}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.stat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
-.stat-val{font-size:20px;font-weight:700;color:var(--accent2)}
-.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
-.progress-wrap{background:var(--surface);border-radius:99px;height:8px;overflow:hidden;margin-top:6px}
-.progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .4s ease}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.fg{display:flex;flex-direction:column;gap:4px}
-.fg.full{grid-column:1/-1}
-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-select,input{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;width:100%;outline:none}
-select:focus,input:focus{border-color:var(--accent)}
-select option{background:var(--surface2)}
-select:disabled{opacity:.45;cursor:not-allowed}
-.hint{font-size:10px;color:var(--muted);margin-top:2px}
-.tt-wrap{overflow-x:auto}
+body{background:var(--bg);color:var(--tx);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh;
+  background-image:radial-gradient(ellipse at 15% 0%,rgba(124,111,255,.09) 0%,transparent 55%),
+                   radial-gradient(ellipse at 85% 100%,rgba(0,229,176,.07) 0%,transparent 55%)}
+
+/* Header */
+header{background:rgba(15,19,32,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--bd);
+  padding:0 32px;height:62px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+.logo-box{width:36px;height:36px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 20px rgba(124,111,255,.35);flex-shrink:0}
+.logo-text{font-size:16px;font-weight:800;background:linear-gradient(90deg,var(--ac),var(--ac2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:11px;color:var(--mu);-webkit-text-fill-color:var(--mu);margin-top:1px}
+.hbadge{margin-left:auto;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;
+  background:rgba(124,111,255,.12);border:1px solid rgba(124,111,255,.3);color:var(--ac)}
+
+/* Layout */
+.wrap{max-width:1100px;margin:0 auto;padding:28px 24px;display:flex;flex-direction:column;gap:20px}
+
+/* Cards */
+.card{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r);padding:20px;transition:border-color .2s}
+.card:hover{border-color:var(--bd2)}
+.ctitle{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);
+  margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.ctitle::before{content:'';width:3px;height:12px;background:linear-gradient(var(--ac),var(--ac2));border-radius:2px}
+.step-hd{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.step-n{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--ac2));
+  color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 0 12px rgba(124,111,255,.3)}
+.step-t{font-size:15px;font-weight:700}
+
+/* Buttons */
+.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;
+  transition:all .2s;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.btn-p{background:linear-gradient(135deg,var(--ac),#5e54e0);color:#fff;
+  box-shadow:0 4px 16px rgba(124,111,255,.35)}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(124,111,255,.45)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-g{background:linear-gradient(135deg,var(--green),#2ab87a);color:#fff;
+  box-shadow:0 4px 14px rgba(61,214,140,.28)}
+.btn-g:hover{transform:translateY(-1px)}
+.btn-o{background:transparent;border:1px solid var(--bd2);color:var(--tx)}
+.btn-o:hover{border-color:var(--ac2);color:var(--ac2)}
+
+/* Form */
+.frow{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px}
+.fg{display:flex;flex-direction:column;gap:5px}
+label{font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+input[type=text],input[type=number],select{background:var(--sf);border:1px solid var(--bd);border-radius:8px;
+  color:var(--tx);padding:9px 12px;font-size:13px;width:100%;outline:none;font-family:inherit;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(124,111,255,.12)}
+select option{background:var(--sf2)}
+
+/* Days */
+.days-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.dpill{padding:7px 16px;border:1px solid var(--bd);border-radius:99px;font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .2s;user-select:none;color:var(--mu)}
+.dpill:hover{border-color:var(--ac);color:var(--tx)}
+.dpill.on{background:linear-gradient(135deg,var(--ac),#5e54e0);border-color:var(--ac);color:#fff;
+  box-shadow:0 2px 12px rgba(124,111,255,.35)}
+
+/* Subject rows */
+.slist{display:flex;flex-direction:column;gap:10px}
+.srow{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:14px;
+  display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;transition:border-color .2s}
+.srow:hover{border-color:var(--bd2)}
+.ftags{display:flex;flex-wrap:wrap;gap:4px;min-height:26px}
+.ftag{background:rgba(124,111,255,.12);border:1px solid rgba(124,111,255,.25);border-radius:99px;
+  padding:3px 10px;font-size:12px;display:inline-flex;align-items:center;gap:5px;color:var(--ac)}
+.ftag button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:13px;line-height:1;padding:0}
+.ftag button:hover{color:var(--danger)}
+.afrow{display:flex;gap:6px;margin-top:8px}
+.afrow input{flex:1}
+
+/* Timetable */
+.tt-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.tt-tab{padding:7px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--sf);
+  color:var(--mu);cursor:pointer;font-size:12px;font-weight:600;transition:all .2s}
+.tt-tab:hover{border-color:var(--bd2);color:var(--tx)}
+.tt-tab.on{background:linear-gradient(135deg,var(--ac),#5e54e0);border-color:var(--ac);color:#fff;
+  box-shadow:0 2px 12px rgba(124,111,255,.3)}
+.ttscroll{overflow-x:auto;border-radius:10px;border:1px solid var(--bd)}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:var(--surface);color:var(--muted);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.06em;padding:8px 10px;border:1px solid var(--border);white-space:nowrap}
-td{padding:6px 8px;border:1px solid var(--border);vertical-align:top;min-width:90px}
-tr:hover td{background:rgba(108,99,255,.05)}
-.chip{border-radius:5px;padding:3px 7px;font-size:11px;display:inline-flex;align-items:center;gap:4px;margin:2px;cursor:default}
-.chip-theory{background:var(--accent);color:#fff}
-.chip-lab{background:var(--accent2);color:#000}
-.chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0;opacity:.65}
-.chip button:hover{opacity:1}
-.empty-cell{color:var(--border);font-size:11px}
-.violation{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:#ff8fa3;margin-bottom:6px}
-.violation strong{color:var(--danger)}
-#toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;font-size:13px;max-width:340px;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;z-index:999}
+thead th{background:var(--sf);color:var(--mu);font-weight:700;text-transform:uppercase;font-size:10px;
+  letter-spacing:.08em;padding:11px 14px;border-bottom:2px solid var(--bd2);white-space:nowrap}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--bd);vertical-align:middle;min-width:120px;transition:background .15s}
+tbody tr:hover td{background:rgba(124,111,255,.03)}
+tbody tr:last-child td{border-bottom:none}
+.slabel{color:var(--mu);font-weight:700;font-size:11px;white-space:nowrap;font-family:monospace;padding:8px 14px}
+.cempty{color:var(--bd2);font-size:18px;text-align:center}
+.cbreak{background:linear-gradient(135deg,rgba(255,179,71,.08),rgba(255,179,71,.03));
+  color:var(--warn);font-weight:600;text-align:center;font-size:12px;border-left:3px solid rgba(255,179,71,.5);
+  letter-spacing:.03em}
+.cell-card{border-radius:8px;padding:7px 10px;margin:2px 0;border-left:3px solid;transition:transform .15s}
+.cell-card:hover{transform:scale(1.02)}
+.cell-subj{font-weight:700;font-size:12px}
+.cell-fac{font-size:10px;margin-top:2px;opacity:.75}
+
+/* Downloads */
+.dlrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.wbanner{background:rgba(255,179,71,.07);border:1px solid rgba(255,179,71,.22);border-radius:8px;
+  padding:12px;font-size:12px;color:var(--warn);margin-bottom:14px}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;background:rgba(22,28,46,.96);border:1px solid var(--bd2);
+  border-radius:var(--r);padding:13px 20px;font-size:13px;max-width:360px;opacity:0;
+  transform:translateY(12px);transition:all .3s;pointer-events:none;z-index:999;backdrop-filter:blur(12px)}
 #toast.show{opacity:1;transform:translateY(0)}
 #toast.ok{border-color:var(--green);color:var(--green)}
 #toast.err{border-color:var(--danger);color:var(--danger)}
 #toast.warn{border-color:var(--warn);color:var(--warn)}
-.done-banner{background:linear-gradient(135deg,rgba(108,99,255,.2),rgba(0,212,170,.15));border:1px solid var(--accent);border-radius:var(--r);padding:20px;text-align:center}
-.done-banner .score{font-size:40px;font-weight:800;color:var(--accent2)}
-.done-banner p{color:var(--muted);margin-top:4px}
-.pending-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
-.pending-item:last-child{border-bottom:none}
-.badge{background:var(--accent);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;display:inline-block;margin:1px}
-.badge.lab{background:var(--accent2);color:#000}
-.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
-.tag-easy{background:rgba(76,175,130,.2);color:var(--green)}
-.tag-medium{background:rgba(255,179,71,.2);color:var(--warn)}
-.tag-hard{background:rgba(255,77,109,.2);color:var(--danger)}
-#no-session{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:15px;flex-direction:column;gap:10px}
-#no-session .icon{font-size:48px}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
-.reward-log{max-height:120px;overflow-y:auto;font-size:11px;font-family:monospace}
-.reward-log div{padding:2px 0;border-bottom:1px solid var(--border)}
-.reward-log div:last-child{border-bottom:none}
-.rl-ok{color:var(--green)}
-.rl-err{color:var(--danger)}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:99px}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🏫 School Timetable Scheduler</h1>
-  <span class="sub">OpenEnv · Multi-step Scheduling Environment</span>
-  <a href="/generate" style="margin-left:auto;color:var(--muted);font-size:13px;text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px">📅 Timetable Generator →</a>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
-    <span id="task-tag" class="tag"></span>
-    <span id="step-counter" style="color:var(--muted);font-size:12px"></span>
+  <div class="logo-box">🏫</div>
+  <div>
+    <div class="logo-text">School Timetable Generator</div>
+    <div class="logo-sub">Conflict-free · Auto-scheduled · Downloadable</div>
   </div>
+  <span class="hbadge">OpenEnv Hackathon</span>
 </header>
 
-<div class="layout">
-<!-- ═══ SIDEBAR ═══ -->
-<aside class="sidebar">
+<div class="wrap">
 
-  <!-- Task + Reset -->
+  <!-- Step 1 -->
   <div class="card">
-    <div class="card-title">Task Difficulty</div>
-    <div class="task-btns">
-      <button class="task-btn active" data-task="easy">🟢 Easy</button>
-      <button class="task-btn" data-task="medium">🟡 Medium</button>
-      <button class="task-btn" data-task="hard">🔴 Hard</button>
+    <div class="step-hd"><div class="step-n">1</div><div class="step-t">Class Info</div></div>
+    <div class="frow">
+      <div class="fg"><label>Class / Standard</label><input id="g-cls" type="text" value="Class 10" placeholder="e.g. Class 10"/></div>
+      <div class="fg"><label>Divisions</label><input id="g-divs" type="number" min="1" max="10" value="3"/></div>
+      <div class="fg"><label>Periods / Day</label><input id="g-ppd" type="number" min="4" max="12" value="7"/></div>
+      <div class="fg"><label>Break After Period</label><input id="g-brk" type="number" min="1" max="12" value="4"/></div>
     </div>
-    <button class="btn btn-primary" id="reset-btn" style="margin-top:10px">Reset Environment</button>
+    <div>
+      <label style="display:block;margin-top:14px;margin-bottom:8px">Working Days</label>
+      <div class="days-row" id="g-days">
+        <span class="dpill on" data-day="Mon">Mon</span>
+        <span class="dpill on" data-day="Tue">Tue</span>
+        <span class="dpill on" data-day="Wed">Wed</span>
+        <span class="dpill on" data-day="Thu">Thu</span>
+        <span class="dpill on" data-day="Fri">Fri</span>
+        <span class="dpill" data-day="Sat">Sat</span>
+      </div>
+    </div>
   </div>
 
-  <!-- Assign form -->
+  <!-- Step 2 -->
   <div class="card">
-    <div class="card-title">Assign Class</div>
-    <div class="form-grid">
-      <div class="fg full">
-        <label>Division</label>
-        <select id="sel-division"><option value="">— select —</option></select>
-      </div>
-      <div class="fg full">
-        <label>Subject</label>
-        <select id="sel-subject"><option value="">— select —</option></select>
-        <span class="hint" id="hint-subject"></span>
-      </div>
-      <div class="fg full">
-        <label>Faculty</label>
-        <select id="sel-faculty"><option value="">— select —</option></select>
-        <span class="hint" id="hint-faculty"></span>
-      </div>
-      <div class="fg">
-        <label>Room</label>
-        <select id="sel-room"><option value="">— select —</option></select>
-      </div>
-      <div class="fg">
-        <label>Slot</label>
-        <select id="sel-slot"><option value="">— select —</option></select>
-      </div>
+    <div class="step-hd"><div class="step-n">2</div><div class="step-t">Subjects &amp; Faculty</div></div>
+    <div class="slist" id="g-slist"></div>
+    <button class="btn btn-o" id="g-add" style="margin-top:14px;width:auto">+ Add Subject</button>
+    <p style="color:var(--mu);font-size:11px;margin-top:12px;line-height:1.7">
+      <strong style="color:var(--tx)">One faculty</strong> → shared across all divisions (clash-free guaranteed) &nbsp;·&nbsp;
+      <strong style="color:var(--tx)">Multiple faculty</strong> → one per division
+    </p>
+  </div>
+
+  <!-- Generate -->
+  <div style="display:flex;gap:16px;align-items:center">
+    <button class="btn btn-p" id="g-gen" style="width:auto;padding:13px 36px;font-size:15px">⚡ Generate Timetable</button>
+    <span id="g-status" style="color:var(--mu);font-size:13px"></span>
+  </div>
+
+  <!-- Output -->
+  <div class="card" id="g-out" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+      <div class="ctitle" style="margin-bottom:0">Generated Timetable</div>
+      <button class="btn btn-g" id="g-dlall" style="width:auto">⬇ Download All Faculty (CSV)</button>
     </div>
-    <button class="btn btn-primary" id="assign-btn" style="margin-top:10px" disabled>Assign Class</button>
-  </div>
-
-  <!-- Pending work -->
-  <div class="card">
-    <div class="card-title">Pending Work</div>
-    <div id="pending-list"><span style="color:var(--muted);font-size:12px">No active session.</span></div>
-  </div>
-
-  <!-- Violations -->
-  <div class="card" id="violations-card" style="display:none">
-    <div class="card-title" style="color:var(--danger)">⚠ Last Violations</div>
-    <div id="violations-list"></div>
-  </div>
-
-  <!-- Reward log -->
-  <div class="card" id="log-card" style="display:none">
-    <div class="card-title">Action Log</div>
-    <div class="reward-log" id="reward-log"></div>
-  </div>
-
-</aside>
-
-<!-- ═══ MAIN ═══ -->
-<main class="main">
-
-  <div id="no-session">
-    <div class="icon">📅</div>
-    <div>Select a task and click <strong>Reset Environment</strong> to start.</div>
-  </div>
-
-  <div id="session-content" style="display:none;flex-direction:column;gap:14px">
-
-    <!-- Stats -->
-    <div class="stats">
-      <div class="stat"><div class="stat-val" id="stat-completion">0%</div><div class="stat-label">Completion</div></div>
-      <div class="stat"><div class="stat-val" id="stat-assigned">0/0</div><div class="stat-label">Sessions</div></div>
-      <div class="stat"><div class="stat-val" id="stat-conflicts">0</div><div class="stat-label">Conflicts</div></div>
-      <div class="stat"><div class="stat-val" id="stat-cumreward">+0.00</div><div class="stat-label">Cumul. Reward</div></div>
+    <div class="wbanner" id="g-warn" style="display:none"></div>
+    <div class="tt-tabs" id="g-tabs"></div>
+    <div class="ttscroll" id="g-tt"></div>
+    <div style="margin-top:20px">
+      <div class="ctitle">Download Individual Faculty Timetables</div>
+      <div class="dlrow" id="g-fdl"></div>
     </div>
-
-    <!-- Progress -->
-    <div class="card" style="padding:12px 14px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px">
-        <span>Timetable Progress</span><span id="prog-label">0 / 0 sessions</span>
-      </div>
-      <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
-    </div>
-
-    <!-- Done banner -->
-    <div class="done-banner" id="done-banner" style="display:none">
-      <div class="score" id="final-score-val">—</div>
-      <p id="done-reason">Episode complete</p>
-    </div>
-
-    <!-- Timetable grid -->
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin-bottom:0">Timetable Grid</div>
-        <div id="div-legend" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-      </div>
-      <div class="tt-wrap">
-        <table><thead id="tt-head"></thead><tbody id="tt-body"></tbody></table>
-      </div>
-    </div>
-
   </div>
-</main>
+
 </div>
-
 <div id="toast"></div>
 
 <script>
-// ── State ─────────────────────────────────────────────────────
-let state = null;
-let config = null;
-let cumReward = 0;
-let stepLog = [];
+const COLORS=['#7c6fff','#00e5b0','#ffb347','#ff6b9d','#a78bfa','#38bdf8','#fb923c','#34d399','#f472b6','#60a5fa'];
+let gData=null, gSubjCount=0;
 
-// Division colors for timetable
-const DIV_COLORS = ['#6c63ff','#00d4aa','#ffb347','#ff6b9d','#a78bfa'];
-
-// ── Utils ─────────────────────────────────────────────────────
-function $id(id){ return document.getElementById(id); }
-function val(id){ return $id(id).value; }
-
-function toast(msg, type='ok'){
-  const t = $id('toast');
-  t.textContent = msg; t.className = 'show ' + type;
-  clearTimeout(t._t); t._t = setTimeout(()=>t.className='', 3000);
+function $i(id){return document.getElementById(id)}
+function toast(msg,type='ok'){
+  const t=$i('toast');t.textContent=msg;t.className='show '+type;
+  clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3200);
 }
 
-async function api(path, body=null){
-  const opts = body
-    ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}
-    : {method:'GET'};
-  const res = await fetch(path, opts);
-  if(!res.ok){ const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail||res.statusText); }
-  return res.json();
+// ── Day pills ─────────────────────────────────────────────────
+document.querySelectorAll('.dpill').forEach(p=>{
+  p.addEventListener('click',()=>p.classList.toggle('on'));
+});
+
+// ── Subject rows ──────────────────────────────────────────────
+const DEFAULTS=[
+  {name:'Mathematics',lec:5,fac:['Prof. Sharma']},
+  {name:'Physics',    lec:4,fac:['Dr. Mehta']},
+  {name:'Chemistry',  lec:4,fac:['Ms. Kapoor']},
+  {name:'English',    lec:3,fac:['Mr. Verma']},
+  {name:'History',    lec:3,fac:['Mrs. Singh']},
+];
+
+function addSubj(name='',lec=3,facs=[]){
+  const id=++gSubjCount;
+  const d=document.createElement('div');
+  d.className='srow';d.id='gs-'+id;
+  d.innerHTML=`
+    <div class="fg" style="flex:2;min-width:140px">
+      <label>Subject Name</label>
+      <input type="text" id="gsn-${id}" value="${name}" placeholder="e.g. Mathematics"/>
+    </div>
+    <div class="fg" style="min-width:90px;max-width:110px">
+      <label>Lectures/Week</label>
+      <input type="number" id="gsl-${id}" min="1" max="10" value="${lec}"/>
+    </div>
+    <div class="fg" style="flex:3">
+      <label>Faculty</label>
+      <div class="ftags" id="gft-${id}"></div>
+      <div class="afrow">
+        <input type="text" id="gfi-${id}" placeholder="Faculty name, press Enter"/>
+        <button class="btn btn-o" style="width:auto;padding:8px 14px;white-space:nowrap" onclick="addFac(${id})">Add</button>
+      </div>
+    </div>
+    <button class="btn btn-o" onclick="$i('gs-${id}').remove()"
+      style="width:auto;padding:7px 11px;margin-top:20px;color:var(--danger);border-color:rgba(255,77,109,.3)">✕</button>`;
+  $i('g-slist').appendChild(d);
+  facs.forEach(f=>addFacVal(id,f));
+  $i('gfi-'+id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addFac(id)}});
 }
 
-function setOpts(id, items, labelFn, valueFn, placeholder='— select —'){
-  const s = $id(id);
-  const prev = s.value;
-  s.innerHTML = `<option value="">${placeholder}</option>`;
-  items.forEach(o=>{
-    const opt = document.createElement('option');
-    opt.value = valueFn(o); opt.textContent = labelFn(o);
-    s.appendChild(opt);
-  });
-  if(prev) s.value = prev; // preserve selection if still valid
+function addFac(id){
+  const inp=$i('gfi-'+id);
+  inp.value.split(',').map(s=>s.trim()).filter(Boolean).forEach(n=>addFacVal(id,n));
+  inp.value='';
 }
 
-// ── Smart form filtering ──────────────────────────────────────
-
-function getOccupiedSlots(){
-  // slots already used per faculty / room / division
-  const byFaculty={}, byRoom={}, byDivision={};
-  if(!state) return {byFaculty, byRoom, byDivision};
-  state.timetable_entries.forEach(e=>{
-    (byFaculty[e.faculty_id] = byFaculty[e.faculty_id]||new Set()).add(e.slot_id);
-    (byRoom[e.room_id]       = byRoom[e.room_id]      ||new Set()).add(e.slot_id);
-    (byDivision[e.division_id]=byDivision[e.division_id]||new Set()).add(e.slot_id);
-  });
-  return {byFaculty, byRoom, byDivision};
+function addFacVal(id,name){
+  if(!name)return;
+  const c=$i('gft-'+id);
+  if([...c.querySelectorAll('.ftag')].some(t=>t.dataset.n===name))return;
+  const t=document.createElement('span');t.className='ftag';t.dataset.n=name;
+  t.innerHTML=`${name}<button onclick="this.parentElement.remove()" title="Remove">×</button>`;
+  c.appendChild(t);
 }
 
-function onDivisionChange(){
-  if(!config||!state) return;
-  const divId = val('sel-division');
-  // filter subjects to only those pending for this division
-  const pending = state.available_actions_hint.pending_work||[];
-  const pw = pending.find(p=>p.division_id===divId);
-  const pendingSubjects = pw ? Object.keys(pw.subjects_needed) : config.subjects.map(s=>s.subject_id);
-  const subjects = config.subjects.filter(s=>pendingSubjects.includes(s.subject_id));
-  setOpts('sel-subject', subjects,
-    s=>s.name+(s.requires_lab?' 🔬':'')+(pw&&pw.subjects_needed[s.subject_id]?' (×'+pw.subjects_needed[s.subject_id]+' left)':''),
-    s=>s.subject_id);
-  $id('hint-subject').textContent = subjects.length ? subjects.length+' subject(s) pending' : 'All scheduled';
-  onSubjectChange();
+function getSubjs(){
+  return [...document.querySelectorAll('.srow')].map(row=>{
+    const id=row.id.split('-')[1];
+    const name=$i('gsn-'+id).value.trim();
+    const lec=parseInt($i('gsl-'+id).value)||1;
+    const facs=[...$i('gft-'+id).querySelectorAll('.ftag')].map(t=>t.dataset.n);
+    return name&&facs.length?{name,lectures_per_week:lec,faculty:facs}:null;
+  }).filter(Boolean);
 }
 
-function onSubjectChange(){
-  if(!config||!state) return;
-  const subjectId = val('sel-subject');
-  const subject = config.subjects.find(s=>s.subject_id===subjectId);
-  const {byFaculty} = getOccupiedSlots();
+DEFAULTS.forEach(s=>addSubj(s.name,s.lec,s.fac));
+$i('g-add').addEventListener('click',()=>addSubj());
 
-  // filter faculty: must be able to teach this subject
-  const hints = state.available_actions_hint.faculty_status||[];
-  let faculty = hints;
-  if(subjectId){
-    faculty = hints.filter(f=>f.can_teach.includes(subjectId));
-  }
-  setOpts('sel-faculty', faculty,
-    f=>f.name+' ['+f.current_load+'/'+f.max_workload+' sessions]',
-    f=>f.faculty_id);
-  $id('hint-faculty').textContent = faculty.length
-    ? faculty.length+' qualified faculty'
-    : '⚠ No qualified faculty for this subject';
+// ── Generate ──────────────────────────────────────────────────
+$i('g-gen').addEventListener('click',async()=>{
+  const days=[...$i('g-days').querySelectorAll('.dpill.on')].map(p=>p.dataset.day);
+  const subjs=getSubjs();
+  const ppd=parseInt($i('g-ppd').value)||7;
+  const brk=parseInt($i('g-brk').value)||4;
+  if(!days.length){toast('Select at least one working day','warn');return}
+  if(!subjs.length){toast('Add at least one subject with faculty','warn');return}
+  if(brk>ppd){toast('Break period cannot exceed periods per day','warn');return}
 
-  // filter rooms by lab requirement
-  if(subject){
-    const rooms = config.rooms.filter(r=>
-      subject.requires_lab ? r.room_type==='lab' : r.room_type==='classroom'
-    );
-    setOpts('sel-room', rooms,
-      r=>r.room_id+' ('+r.room_type+')',
-      r=>r.room_id);
-  } else {
-    setOpts('sel-room', config.rooms, r=>r.room_id+' ('+r.room_type+')', r=>r.room_id);
-  }
+  const btn=$i('g-gen');btn.disabled=true;btn.textContent='⏳ Generating...';
+  $i('g-status').textContent='';
 
-  onFacultyChange();
-}
-
-function onFacultyChange(){
-  if(!config||!state) return;
-  const facId = val('sel-faculty');
-  const divId = val('sel-division');
-  const {byFaculty, byRoom, byDivision} = getOccupiedSlots();
-
-  const hints = state.available_actions_hint.faculty_status||[];
-  const facHint = hints.find(f=>f.faculty_id===facId);
-
-  // available slots = faculty free slots ∩ division free slots
-  let slots = config.time_slots;
-  if(facHint){
-    const facFree = new Set(facHint.free_slots);
-    const divBusy = byDivision[divId]||new Set();
-    slots = slots.filter(s=>facFree.has(s.slot_id) && !divBusy.has(s.slot_id));
-  }
-  setOpts('sel-slot', slots, s=>s.slot_id, s=>s.slot_id);
-}
-
-// ── Render ────────────────────────────────────────────────────
-
-function renderAll(obs, cfg, reward=null){
-  state = obs;
-  config = cfg;
-  if(reward !== null){ cumReward += reward; }
-
-  $id('no-session').style.display = 'none';
-  const sc = $id('session-content');
-  sc.style.display = 'flex';
-
-  const p = obs.progress;
-  $id('stat-completion').textContent = p.completion_percentage.toFixed(1)+'%';
-  $id('stat-assigned').textContent   = p.assigned_sessions+'/'+p.total_required_sessions;
-  $id('stat-cumreward').textContent  = (cumReward>=0?'+':'')+cumReward.toFixed(3);
-  $id('stat-cumreward').style.color  = cumReward>=0?'var(--green)':'var(--danger)';
-  $id('progress-bar').style.width    = p.completion_percentage+'%';
-  $id('prog-label').textContent      = p.assigned_sessions+' / '+p.total_required_sessions+' sessions';
-  $id('step-counter').textContent    = 'Step '+obs.step_count+' / '+cfg.max_steps;
-
-  const conflicts = countConflicts(obs.timetable_entries);
-  $id('stat-conflicts').textContent = conflicts;
-  $id('stat-conflicts').style.color = conflicts>0?'var(--danger)':'var(--accent2)';
-
-  if(obs.is_terminal){
-    $id('assign-btn').disabled = true;
-  } else {
-    $id('assign-btn').disabled = false;
-    refreshForm();
-  }
-
-  renderPending(obs.available_actions_hint.pending_work||[]);
-  renderViolations(obs.recent_violations||[]);
-  renderTimetable(obs.timetable_entries, cfg);
-}
-
-function refreshForm(){
-  if(!config||!state) return;
-  setOpts('sel-division', config.divisions, d=>d.name+' ('+d.division_id+')', d=>d.division_id);
-  onDivisionChange();
-}
-
-function countConflicts(entries){
-  const f=new Set(), r=new Set(), d=new Set(); let c=0;
-  entries.forEach(e=>{
-    const fk=e.faculty_id+'|'+e.slot_id, rk=e.room_id+'|'+e.slot_id, dk=e.division_id+'|'+e.slot_id;
-    if(f.has(fk))c++; f.add(fk);
-    if(r.has(rk))c++; r.add(rk);
-    if(d.has(dk))c++; d.add(dk);
-  });
-  return c;
-}
-
-function renderPending(pending){
-  const div = $id('pending-list');
-  if(!pending.length){ div.innerHTML='<span style="color:var(--green);font-size:12px">✓ All sessions scheduled!</span>'; return; }
-  div.innerHTML = pending.map(pw=>{
-    const badges = Object.entries(pw.subjects_needed||{}).map(([s,n])=>{
-      const subj = config&&config.subjects.find(x=>x.subject_id===s);
-      const lab = subj&&subj.requires_lab;
-      return `<span class="badge ${lab?'lab':''}">${s}×${n}</span>`;
-    }).join('');
-    return `<div class="pending-item">
-      <span style="font-weight:600;font-size:12px">${pw.division_id}</span>
-      <div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-end">${badges}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderViolations(violations){
-  const card = $id('violations-card');
-  if(!violations.length){ card.style.display='none'; return; }
-  card.style.display='block';
-  $id('violations-list').innerHTML = violations.map(v=>
-    `<div class="violation"><strong>${v.violation_type}</strong><br><span style="font-size:11px">${v.description}</span></div>`
-  ).join('');
-}
-
-function renderTimetable(entries, cfg){
-  const days = ['Mon','Tue','Wed','Thu','Fri'];
-  const periods = [...new Set(cfg.time_slots.map(s=>s.period))].sort((a,b)=>a-b);
-  const divs = cfg.divisions.map(d=>d.division_id);
-
-  // Division color map
-  const divColor = {};
-  divs.forEach((d,i)=>divColor[d]=DIV_COLORS[i%DIV_COLORS.length]);
-
-  // Legend
-  const legend = $id('div-legend');
-  legend.innerHTML = divs.map(d=>
-    `<span style="font-size:11px;display:flex;align-items:center;gap:4px">
-      <span style="width:10px;height:10px;border-radius:2px;background:${divColor[d]};display:inline-block"></span>${d}
-    </span>`
-  ).join('');
-
-  // Build lookup: slot_id -> division_id -> entries[]
-  const lookup = {};
-  entries.forEach(e=>{
-    if(!lookup[e.slot_id]) lookup[e.slot_id]={};
-    if(!lookup[e.slot_id][e.division_id]) lookup[e.slot_id][e.division_id]=[];
-    lookup[e.slot_id][e.division_id].push(e);
-  });
-
-  // Subject & faculty name maps
-  const subjMap = {}; cfg.subjects.forEach(s=>subjMap[s.subject_id]=s);
-  const facMap  = {}; cfg.faculty.forEach(f=>facMap[f.faculty_id]=f);
-
-  $id('tt-head').innerHTML = `<tr><th>Slot</th>${divs.map(d=>`<th style="color:${divColor[d]}">${d}</th>`).join('')}</tr>`;
-
-  const tbody = $id('tt-body');
-  tbody.innerHTML = '';
-  days.forEach(day=>{
-    periods.forEach(p=>{
-      const slotId = `${day}-${p}`;
-      const tr = document.createElement('tr');
-      let html = `<td style="color:var(--muted);white-space:nowrap;font-weight:600;font-size:11px">${slotId}</td>`;
-      divs.forEach(divId=>{
-        const cell = (lookup[slotId]&&lookup[slotId][divId])||[];
-        if(!cell.length){
-          html += `<td><span class="empty-cell">—</span></td>`;
-        } else {
-          const chips = cell.map(e=>{
-            const subj = subjMap[e.subject_id];
-            const fac  = facMap[e.faculty_id];
-            const lab  = subj&&subj.requires_lab;
-            const color = divColor[divId];
-            const style = lab ? '' : `style="background:${color}"`;
-            return `<span class="chip ${lab?'chip-lab':'chip-theory'}" ${style}
-              title="${fac?fac.name:e.faculty_id} · ${e.room_id} · ${e.entry_id}">
-              ${subj?subj.name:e.subject_id}
-              <button onclick="removeEntry('${e.entry_id}')" title="Remove this entry">×</button>
-            </span>`;
-          }).join('');
-          html += `<td>${chips}</td>`;
-        }
-      });
-      tr.innerHTML = html;
-      tbody.appendChild(tr);
+  try{
+    const res=await fetch('/api/generate',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        class_name:$i('g-cls').value.trim()||'Class',
+        num_divisions:parseInt($i('g-divs').value)||1,
+        subjects:subjs,working_days:days,periods_per_day:ppd,break_after_period:brk
+      })
     });
+    if(!res.ok){const e=await res.json();throw new Error(e.detail||'Server error')}
+    gData=await res.json();
+    renderOutput(gData);
+    toast('Timetable generated successfully!','ok');
+    $i('g-status').textContent='✓ '+gData.divisions.length+' divisions · '+Object.keys(gData.faculty_grids).length+' faculty · '+gData.grid.filter(r=>r.subject!=='FREE'&&r.subject!=='BREAK').length+' sessions';
+  }catch(e){
+    toast(e.message,'err');
+    $i('g-status').textContent='✗ '+e.message;
+  }finally{
+    btn.disabled=false;btn.textContent='⚡ Generate Timetable';
+  }
+});
+
+// ── Render output ─────────────────────────────────────────────
+function renderOutput(data){
+  $i('g-out').style.display='block';
+
+  // Warnings
+  const wb=$i('g-warn');
+  if(data.unresolved&&data.unresolved.length){
+    wb.style.display='block';
+    wb.innerHTML='⚠ Could not fully schedule: '+
+      data.unresolved.map(u=>`<strong>Div ${u.division}</strong> · ${u.subject} (${u.assigned}/${u.needed} sessions)`).join(', ');
+  }else wb.style.display='none';
+
+  // Build tabs
+  const tabs=$i('g-tabs');tabs.innerHTML='';
+  const allTabs=[
+    ...data.divisions.map(d=>({label:'Div '+d,type:'div',key:d})),
+    ...Object.keys(data.faculty_grids).map(f=>({label:f,type:'fac',key:f})),
+  ];
+  allTabs.forEach((t,i)=>{
+    const b=document.createElement('button');
+    b.className='tt-tab'+(i===0?' on':'');
+    b.textContent=t.label;
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('.tt-tab').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');renderTab(data,t);
+    });
+    tabs.appendChild(b);
   });
-}
+  renderTab(data,allTabs[0]);
 
-function addLog(msg, ok){
-  const log = $id('reward-log');
-  $id('log-card').style.display='block';
-  const d = document.createElement('div');
-  d.className = ok?'rl-ok':'rl-err';
-  d.textContent = msg;
-  log.insertBefore(d, log.firstChild);
-  if(log.children.length>30) log.removeChild(log.lastChild);
-}
-
-// ── Remove entry ──────────────────────────────────────────────
-async function removeEntry(entryId){
-  try{
-    const data = await api('/api/remove', {entry_id: entryId});
-    renderAll(data.observation, config, data.reward);
-    addLog('[-] Removed entry '+entryId, false);
-    toast('Entry removed', 'warn');
-  } catch(e){ toast(e.message,'err'); }
-}
-
-// ── Event listeners ───────────────────────────────────────────
-
-document.querySelectorAll('.task-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.task-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
+  // Faculty download buttons
+  const fdl=$i('g-fdl');fdl.innerHTML='';
+  Object.keys(data.faculty_grids).forEach(fac=>{
+    const a=document.createElement('a');
+    a.href='/api/download/faculty/'+encodeURIComponent(fac);
+    a.className='btn btn-o';
+    a.style.cssText='font-size:12px;padding:7px 14px;text-decoration:none';
+    a.textContent='⬇ '+fac;
+    fdl.appendChild(a);
   });
-});
+  $i('g-dlall').onclick=()=>window.location='/api/download/all';
+  $i('g-out').scrollIntoView({behavior:'smooth'});
+}
 
-$id('sel-division').addEventListener('change', onDivisionChange);
-$id('sel-subject').addEventListener('change', onSubjectChange);
-$id('sel-faculty').addEventListener('change', onFacultyChange);
+function renderTab(data,tab){
+  if(tab.type==='div') renderDivTable(data,tab.key);
+  else renderFacTable(data,tab.key);
+}
 
-$id('reset-btn').addEventListener('click', async ()=>{
-  const task = document.querySelector('.task-btn.active').dataset.task;
-  try{
-    $id('reset-btn').disabled=true; $id('reset-btn').textContent='Resetting...';
-    cumReward=0; stepLog=[];
-    $id('reward-log').innerHTML=''; $id('log-card').style.display='none';
-    $id('done-banner').style.display='none';
-    const data = await api('/api/reset', {task});
-    renderAll(data.observation, data.observation.config, null);
-    const tag=$id('task-tag');
-    tag.textContent=task.charAt(0).toUpperCase()+task.slice(1);
-    tag.className='tag tag-'+task;
-    toast('Environment reset — '+task+' task loaded','ok');
-  } catch(e){ toast(e.message,'err'); }
-  finally{ $id('reset-btn').disabled=false; $id('reset-btn').textContent='Reset Environment'; }
-});
+function renderDivTable(data,divId){
+  const {days,periods_per_day:ppd,break_after_period:brk,subjects}=data;
+  const smap={};subjects.forEach((s,i)=>smap[s.name]=COLORS[i%COLORS.length]);
+  const lk={};data.grid.filter(r=>r.division===divId).forEach(r=>lk[r.day+'|'+r.period]=r);
 
-$id('assign-btn').addEventListener('click', async ()=>{
-  const body={
-    division_id: val('sel-division'),
-    subject_id:  val('sel-subject'),
-    faculty_id:  val('sel-faculty'),
-    room_id:     val('sel-room'),
-    slot_id:     val('sel-slot'),
-  };
-  if(Object.values(body).some(v=>!v)){ toast('Fill in all fields','warn'); return; }
-  try{
-    $id('assign-btn').disabled=true;
-    const data = await api('/api/assign', body);
-    renderAll(data.observation, config, data.reward);
+  let h='<table><thead><tr><th style="min-width:60px">Period</th>'+
+    days.map(d=>`<th>${d}</th>`).join('')+'</tr></thead><tbody>';
 
-    if(data.valid){
-      const msg = `[+] ${body.subject_id} → ${body.division_id} @ ${body.slot_id}  (${data.reward>=0?'+':''}${data.reward.toFixed(3)})`;
-      addLog(msg, true);
-      toast(msg, 'ok');
-    } else {
-      const vtype = data.violations[0]?.violation_type||'Invalid';
-      const msg = `[✗] ${vtype}: ${data.violations[0]?.description?.slice(0,60)||''}`;
-      addLog(msg, false);
-      toast(vtype+': '+( data.violations[0]?.description?.slice(0,80)||''), 'err');
-    }
+  for(let p=1;p<=ppd;p++){
+    const isBreak=p===brk;
+    h+=`<tr><td class="slabel">P${p}${isBreak?' ☕':''}</td>`;
+    days.forEach(d=>{
+      const r=lk[d+'|'+p];
+      if(!r||r.subject==='FREE') h+=`<td class="cempty">—</td>`;
+      else if(r.subject==='BREAK') h+=`<td class="cbreak">☕ Break</td>`;
+      else{
+        const c=smap[r.subject]||COLORS[0];
+        h+=`<td><div class="cell-card" style="background:${c}14;border-left-color:${c}">
+          <div class="cell-subj" style="color:${c}">${r.subject}</div>
+          <div class="cell-fac">${r.faculty||''}</div>
+        </div></td>`;
+      }
+    });
+    h+='</tr>';
+  }
+  h+='</tbody></table>';
+  $i('g-tt').innerHTML=h;
+}
 
-    if(data.done){
-      const score = data.final_score ?? (await api('/api/metrics')).task_score;
-      $id('final-score-val').textContent = (score*100).toFixed(1)+'%';
-      $id('done-reason').textContent = 'Episode ended: '+(data.observation.termination_reason||'complete');
-      $id('done-banner').style.display='block';
-      toast('Episode complete! Final score: '+(score*100).toFixed(1)+'%','ok');
-    }
-  } catch(e){ toast(e.message,'err'); }
-  finally{ if(state&&!state.is_terminal) $id('assign-btn').disabled=false; }
-});
+function renderFacTable(data,facName){
+  const {days,periods_per_day:ppd,break_after_period:brk}=data;
+  const rows=data.faculty_grids[facName]||[];
+  const lk={};rows.forEach(r=>lk[r.day+'|'+r.period]=r);
+
+  let h='<table><thead><tr><th style="min-width:60px">Period</th>'+
+    days.map(d=>`<th>${d}</th>`).join('')+'</tr></thead><tbody>';
+
+  for(let p=1;p<=ppd;p++){
+    h+=`<tr><td class="slabel">P${p}${p===brk?' ☕':''}</td>`;
+    days.forEach(d=>{
+      const r=lk[d+'|'+p];
+      if(!r){h+=`<td class="cempty">—</td>`;return}
+      if(r.is_break){h+=`<td class="cbreak">☕ Break</td>`;return}
+      if(!r.classes||!r.classes.length){h+=`<td style="color:var(--mu);text-align:center;font-size:11px">Free</td>`;return}
+      const chips=r.classes.map((c,i)=>{
+        const col=COLORS[i%COLORS.length];
+        return `<div class="cell-card" style="background:${col}14;border-left-color:${col}">
+          <div class="cell-subj" style="color:${col}">${c.subject}</div>
+          <div class="cell-fac">Div ${c.division}</div>
+        </div>`;
+      }).join('');
+      h+=`<td>${chips}</td>`;
+    });
+    h+='</tr>';
+  }
+  h+='</tbody></table>';
+  $i('g-tt').innerHTML=h;
+}
 </script>
 </body>
 </html>

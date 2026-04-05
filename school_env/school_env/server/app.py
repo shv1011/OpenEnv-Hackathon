@@ -50,7 +50,7 @@ if static_dir.exists():
 
     @app.get("/ui/generate")
     def ui_generate():
-        return FileResponse(str(static_dir / "generator.html"))
+        return FileResponse(str(static_dir / "index.html"))
 
 
 if __name__ == "__main__":
