@@ -188,14 +188,14 @@ def main():
             env_client = SchoolTimetableEnvClient(base_url=ENV_URL)
 
         with env_client.sync() as env:
-            obs = env.reset(task=TASK_NAME)
+            result = env.reset(task=TASK_NAME)
+            obs = result.observation
             done = False
 
             while not done and step < MAX_STEPS:
                 action, action_str = get_action(llm, history, build_prompt(obs))
 
                 if action is None:
-                    # Failed to get action — emit step and stop
                     print(
                         f"[STEP]  step={step + 1} action=null"
                         f" reward=0.00 done=false error={action_str}",
@@ -203,17 +203,17 @@ def main():
                     )
                     break
 
-                obs = env.step(action)
+                result = env.step(action)
+                obs = result.observation
                 step += 1
-                reward = obs.reward
+                reward = result.reward or 0.0
                 rewards.append(reward)
-                done = obs.done
+                done = result.done
 
                 error_str = "null"
                 if obs.violations:
                     error_str = obs.violations[0].get("violation_type", "VIOLATION")
 
-                # [STEP] — one per step, immediately after env.step()
                 print(
                     f"[STEP]  step={step}"
                     f" action={action_str}"
