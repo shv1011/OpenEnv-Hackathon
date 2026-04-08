@@ -1,48 +1,33 @@
-"""
-OpenEnv client for the School Timetable Scheduling Environment.
-
-Usage:
-    from client import SchoolTimetableEnvClient, TimetableAction
-
-    # Async (recommended for TRL training)
-    async with SchoolTimetableEnvClient(base_url="https://your-space.hf.space") as env:
-        obs = await env.reset(task="easy")
-        obs = await env.step(TimetableAction(
-            action_type="assign_class",
-            division_id="Sem1-A",
-            subject_id="MATH",
-            faculty_id="F001",
-            room_id="CR101",
-            slot_id="Mon-1",
-        ))
-        print(obs.completion_percentage)
-
-    # Sync (for quick testing)
-    with SchoolTimetableEnvClient(base_url="https://your-space.hf.space").sync() as env:
-        obs = env.reset(task="easy")
-        obs = env.step(TimetableAction(action_type="assign_class", ...))
-"""
 from __future__ import annotations
+from typing import Any, Dict
 from openenv.core import EnvClient
+from openenv.core.client_types import StepResult
 from models import TimetableAction, TimetableObservation, TimetableState
 
 
 class SchoolTimetableEnvClient(
     EnvClient[TimetableAction, TimetableObservation, TimetableState]
 ):
-    """
-    WebSocket client for the School Timetable Scheduling Environment.
+    def _step_payload(self, action: TimetableAction) -> Dict[str, Any]:
+        return {k: v for k, v in action.model_dump().items() if v is not None}
 
-    Connects to a running HF Space or local server.
-    Compatible with TRL's GRPOTrainer environment_factory.
-    """
-    pass
+    def _parse_result(self, payload: Dict[str, Any]) -> StepResult[TimetableObservation]:
+        obs_data = payload.get("observation", payload)
+        obs = TimetableObservation(**{
+            k: v for k, v in obs_data.items()
+            if k in TimetableObservation.model_fields
+        })
+        return StepResult(
+            observation=obs,
+            reward=payload.get("reward", obs.reward),
+            done=payload.get("done", obs.done),
+        )
+
+    def _parse_state(self, payload: Dict[str, Any]) -> TimetableState:
+        return TimetableState(**{
+            k: v for k, v in payload.items()
+            if k in TimetableState.model_fields
+        })
 
 
-# Re-export models for convenience
-__all__ = [
-    "SchoolTimetableEnvClient",
-    "TimetableAction",
-    "TimetableObservation",
-    "TimetableState",
-]
+__all__ = ["SchoolTimetableEnvClient", "TimetableAction", "TimetableObservation", "TimetableState"]
