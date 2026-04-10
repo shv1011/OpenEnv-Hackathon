@@ -99,18 +99,27 @@ tasks:
     description: Single division, 4 subjects, 3 faculty, 2 classrooms. No lab.
     max_steps: 60
     target_score: 0.90
+    grader:
+      enabled: true
+      function: "env.tasks.EasyTask.grade"
 
   - id: medium
     difficulty: yellow
     description: Two divisions, 1 lab subject, 5 faculty with limited availability.
     max_steps: 150
     target_score: 0.80
+    grader:
+      enabled: true
+      function: "env.tasks.MediumTask.grade"
 
   - id: hard
     difficulty: red
     description: Three divisions, 2 lab subjects, 8 faculty with uneven availability and workload optimization.
     max_steps: 300
     target_score: 0.70
+    grader:
+      enabled: true
+      function: "env.tasks.HardTask.grade"
 
 exports:
   - format: csv
