@@ -39,6 +39,40 @@ app = create_app(
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi import Request
+
+# ── Tasks endpoint ────────────────────────────────────────────
+@app.get("/tasks")
+def list_tasks():
+    """Return all tasks with grader scores — required by validator."""
+    from env.tasks import EasyTask, MediumTask, HardTask
+    tasks = []
+    for task_id, cls in [("easy", EasyTask), ("medium", MediumTask), ("hard", HardTask)]:
+        score = cls.grade([])
+        tasks.append({
+            "id": task_id,
+            "description": cls.DESCRIPTION,
+            "score": score,
+            "target_score": {"easy": 0.90, "medium": 0.80, "hard": 0.70}[task_id],
+        })
+    return {"tasks": tasks}
+
+
+@app.post("/grade")
+async def grade_task(request: Request):
+    """Grade a timetable for a given task."""
+    body = await request.json()
+    task_id = body.get("task", "easy")
+    entries = body.get("entries", [])
+    from env.tasks import EasyTask, MediumTask, HardTask
+    from env.models import TimetableEntry
+    cls = {"easy": EasyTask, "medium": MediumTask, "hard": HardTask}.get(task_id, EasyTask)
+    try:
+        timetable = [TimetableEntry(**e) for e in entries]
+        score = cls.grade(timetable)
+    except Exception:
+        score = cls.grade([])
+    return {"task": task_id, "score": score}
 
 static_dir = Path(__file__).parent.parent / "static"
 if static_dir.exists():
