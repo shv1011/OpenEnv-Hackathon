@@ -127,7 +127,8 @@ class EasyTask:
         config = EasyTask.get_config()
         engine = ConstraintsEngine(config)
         calc = RewardCalculator(config, engine)
-        return calc.compute_final_score(entries)
+        score = calc.compute_final_score(entries)
+        return round(max(0.01, min(0.99, score)), 4)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -252,7 +253,7 @@ class MediumTask:
             if e.subject_id in lab_subjects and e.room_id not in lab_rooms
         )
         penalty = lab_violations * 0.05
-        return max(0.0, round(base - penalty, 4))
+        return round(max(0.01, min(0.99, base - penalty)), 4)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -365,7 +366,7 @@ class HardTask:
             workload_scores.append(max(0.0, 1.0 - diff / f.max_workload))
         balance_bonus = (sum(workload_scores) / len(workload_scores)) * 0.05
 
-        return min(1.0, round(base + balance_bonus, 4))
+        return round(max(0.01, min(0.99, base + balance_bonus)), 4)
 
 
 # ═══════════════════════════════════════════════════════════════
