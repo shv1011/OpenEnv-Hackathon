@@ -44,23 +44,27 @@ from fastapi import Request
 # ── Tasks endpoint ────────────────────────────────────────────
 @app.get("/tasks")
 def list_tasks():
-    """Return all tasks with grader information — required by validator."""
+    """Return all tasks — required by validator."""
     from env.tasks import EasyTask, MediumTask, HardTask
     tasks = []
     for task_id, cls in [("easy", EasyTask), ("medium", MediumTask), ("hard", HardTask)]:
         score = cls.grade([])
         tasks.append({
             "id": task_id,
+            "name": task_id.capitalize() + " Timetable Scheduling",
             "description": cls.DESCRIPTION,
-            "grader": f"env.tasks.{cls.__name__}.grade",
+            "difficulty": task_id,
+            "max_steps": {"easy": 60, "medium": 150, "hard": 300}[task_id],
+            "grader": {
+                "type": "score_based",
+                "scoring": "completion_and_conflict_free",
+                "score_range": [0.0, 1.0],
+                "function": f"env.tasks.{cls.__name__}.grade",
+            },
             "score": score,
             "target_score": {"easy": 0.90, "medium": 0.80, "hard": 0.70}[task_id],
         })
-    return {
-        "tasks": tasks,
-        "total_tasks": len(tasks),
-        "tasks_with_graders": len(tasks),
-    }
+    return {"tasks": tasks}
 
 
 @app.post("/grade")
