@@ -1,6 +1,5 @@
 # School Timetable Scheduling Environment
 # =========================================
-# Multi-stage Docker build for a clean, production-grade container
 
 FROM python:3.11-slim AS base
 
@@ -30,7 +29,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ─────────────────────────────────────────
 FROM dependencies AS app
 
-# Copy source
+# Copy env package and inference script
 COPY env/ ./env/
 COPY inference.py .
 COPY openenv.yaml .
@@ -42,38 +41,16 @@ RUN mkdir -p timetables logs
 # Environment variable defaults (override at runtime)
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV API_BASE_URL=https://api.openai.com/v1
-ENV MODEL_NAME=gpt-4o
+ENV API_BASE_URL=https://router.huggingface.co/v1
+ENV MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
 
 # ─────────────────────────────────────────
-# Entrypoint
+# Entrypoint — runs ALL tasks (easy, medium, hard)
 # ─────────────────────────────────────────
 ENTRYPOINT ["python", "inference.py"]
-CMD ["--task", "easy", "--export-csv"]
 
 # ─────────────────────────────────────────
-# Usage Examples:
-#
-#   Build:
-#     docker build -t school-timetable-env .
-#
-#   Run (easy task):
-#     docker run --rm \
-#       -e OPENAI_API_KEY=sk-... \
-#       -v $(pwd)/timetables:/app/timetables \
-#       school-timetable-env --task easy --export-csv
-#
-#   Run (hard task with debug):
-#     docker run --rm \
-#       -e OPENAI_API_KEY=sk-... \
-#       -e MODEL_NAME=gpt-4o \
-#       -v $(pwd)/timetables:/app/timetables \
-#       school-timetable-env --task hard --debug --export-csv
-#
-#   Run with custom API endpoint (e.g. Azure, Groq):
-#     docker run --rm \
-#       -e OPENAI_API_KEY=... \
-#       -e API_BASE_URL=https://api.groq.com/openai/v1 \
-#       -e MODEL_NAME=llama-3.1-70b-versatile \
-#       school-timetable-env --task medium
+# Usage:
+#   docker build -t school-timetable-env .
+#   docker run --rm -e HF_TOKEN=hf_... school-timetable-env
 # ─────────────────────────────────────────

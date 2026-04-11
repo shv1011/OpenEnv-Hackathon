@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+timetables/
+logs/
+test_output_format.py
+*.tar.gz

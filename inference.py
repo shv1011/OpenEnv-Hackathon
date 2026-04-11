@@ -1,17 +1,18 @@
 """
 Inference Script – School Timetable Scheduling Environment
 ==========================================================
-Runs an LLM agent (via OpenAI-compatible API) through the scheduling environment.
+Runs an LLM agent (via OpenAI-compatible API) through the scheduling environment
+for ALL tasks (easy, medium, hard).
 
-Usage:
-    python inference.py --task easy --model gpt-4o
-    python inference.py --task medium --debug
-    python inference.py --task hard --export-csv
+MANDATORY environment variables:
+    HF_TOKEN / API_KEY / OPENAI_API_KEY   (required)
+    API_BASE_URL     (default: https://router.huggingface.co/v1)
+    MODEL_NAME       (default: Qwen/Qwen2.5-72B-Instruct)
 
-Environment Variables:
-    OPENAI_API_KEY   (required)
-    API_BASE_URL     (default: https://api.openai.com/v1)
-    MODEL_NAME       (default: gpt-4o)
+STDOUT FORMAT (required by OpenEnv submission validator):
+    [START] task=<task_name> env=<benchmark> model=<model_name>
+    [STEP]  step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>
+    [END]   success=<true|false> steps=<n> score=<score> rewards=<r1,r2,...,rn>
 """
 
 from __future__ import annotations
@@ -19,10 +20,8 @@ import os
 import sys
 import json
 import time
-import argparse
 import traceback
 from typing import Any, Dict, List, Optional
-from datetime import datetime
 
 from openai import OpenAI
 
@@ -37,9 +36,6 @@ from env import (
     RescheduleClassAction,
     RemoveAssignmentAction,
     get_task,
-    export_all_faculty_timetables_csv,
-    export_master_timetable_csv,
-    format_timetable_text,
 )
 
 
@@ -47,8 +43,14 @@ from env import (
 # Constants
 # ═══════════════════════════════════════════════════════════════
 
-DEFAULT_BASE_URL = "https://api.openai.com/v1"
-DEFAULT_MODEL = "gpt-4o"
+API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
+MODEL_NAME   = os.getenv("MODEL_NAME")   or "Qwen/Qwen2.5-72B-Instruct"
+BENCHMARK    = os.getenv("BENCHMARK",    "school-timetable")
+TEMPERATURE  = float(os.getenv("TEMPERATURE", "0.1"))
+
+# All three tasks to run
+ALL_TASKS = ["easy", "medium", "hard"]
 
 SYSTEM_PROMPT = """You are an expert school administrator responsible for building a valid weekly class timetable.
 
@@ -59,13 +61,13 @@ You will receive the current state of the timetable (partially or fully empty) a
 - Time slots
 
 Your goal is to assign all required classes while satisfying ALL constraints:
-1. ❌ No teacher double-booking (same faculty, same slot)
-2. ❌ No room double-booking (same room, same slot)
-3. ❌ Faculty must only teach within their available slots
-4. ❌ Faculty can only teach subjects they are qualified for
-5. ❌ Lab subjects MUST use lab rooms; theory subjects MUST use classrooms
-6. ❌ Do not exceed faculty max workload
-7. ❌ A division can only have ONE class per slot
+1. No teacher double-booking (same faculty, same slot)
+2. No room double-booking (same room, same slot)
+3. Faculty must only teach within their available slots
+4. Faculty can only teach subjects they are qualified for
+5. Lab subjects MUST use lab rooms; theory subjects MUST use classrooms
+6. Do not exceed faculty max workload
+7. A division can only have ONE class per slot
 
 Strategy:
 - Carefully read the "pending_work" section to know what still needs scheduling
@@ -118,21 +120,23 @@ class TimetableAgent:
     def __init__(
         self,
         api_key: str,
-        base_url: str = DEFAULT_BASE_URL,
-        model: str = DEFAULT_MODEL,
-        debug: bool = False,
+        base_url: str = API_BASE_URL,
+        model: str = MODEL_NAME,
         temperature: float = 0.1,
         max_retries: int = 3,
     ):
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
-        self.debug = debug
         self.temperature = temperature
         self.max_retries = max_retries
         self.conversation_history: List[Dict] = []
 
-    def get_action(self, observation_text: str) -> Optional[Action]:
-        """Send observation to LLM and parse returned action."""
+    def reset(self):
+        """Reset conversation history for a new task."""
+        self.conversation_history = []
+
+    def get_action(self, observation_text: str) -> Optional[Dict]:
+        """Send observation to LLM and parse returned action dict."""
         self.conversation_history.append({
             "role": "user",
             "content": observation_text,
@@ -148,55 +152,24 @@ class TimetableAgent:
                     ],
                     temperature=self.temperature,
                     response_format={"type": "json_object"},
+                    timeout=30,
                 )
                 raw = response.choices[0].message.content.strip()
-
-                if self.debug:
-                    print(f"    LLM raw response: {raw[:300]}")
-
                 action_dict = json.loads(raw)
-                action = self._parse_action(action_dict)
 
                 self.conversation_history.append({
                     "role": "assistant",
                     "content": raw,
                 })
 
-                return action
+                return action_dict
 
-            except json.JSONDecodeError as e:
-                print(f"  ⚠️  JSON parse error (attempt {attempt}): {e}")
-            except Exception as e:
-                print(f"  ⚠️  LLM error (attempt {attempt}): {e}")
-                if self.debug:
-                    traceback.print_exc()
+            except json.JSONDecodeError:
+                time.sleep(1)
+            except Exception:
                 time.sleep(1)
 
         return None
-
-    def _parse_action(self, d: Dict) -> Action:
-        action_type = d.get("action_type", "")
-
-        if action_type == "assign_class":
-            payload = d.get("assign_class", {})
-            return Action(
-                action_type=ActionType.ASSIGN_CLASS,
-                assign_class=AssignClassAction(**payload),
-            )
-        elif action_type == "reschedule_class":
-            payload = d.get("reschedule_class", {})
-            return Action(
-                action_type=ActionType.RESCHEDULE_CLASS,
-                reschedule_class=RescheduleClassAction(**payload),
-            )
-        elif action_type == "remove_assignment":
-            payload = d.get("remove_assignment", {})
-            return Action(
-                action_type=ActionType.REMOVE_ASSIGNMENT,
-                remove_assignment=RemoveAssignmentAction(**payload),
-            )
-        else:
-            raise ValueError(f"Unknown action_type: {action_type}")
 
     def summarize_observation(self, obs_dict: Dict) -> str:
         """Convert full observation to a concise, prompt-friendly text."""
@@ -272,207 +245,179 @@ class TimetableAgent:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Main Loop
+# Action parsing helpers
 # ═══════════════════════════════════════════════════════════════
 
-def run_inference(
-    task_id: str = "easy",
-    model: str = DEFAULT_MODEL,
-    base_url: str = DEFAULT_BASE_URL,
-    debug: bool = False,
-    export_csv: bool = False,
-    log_file: Optional[str] = None,
-):
-    api_key = os.getenv("OPENAI_API_KEY", "")
-    if not api_key:
-        print("❌ OPENAI_API_KEY environment variable is not set.")
-        sys.exit(1)
+def parse_action(d: Dict) -> Action:
+    """Parse a dict from LLM into an internal Action object."""
+    action_type = d.get("action_type", "")
 
-    # Override from env
-    base_url = os.getenv("API_BASE_URL", base_url)
-    model = os.getenv("MODEL_NAME", model)
+    if action_type == "assign_class":
+        payload = d.get("assign_class", {})
+        return Action(
+            action_type=ActionType.ASSIGN_CLASS,
+            assign_class=AssignClassAction(**payload),
+        )
+    elif action_type == "reschedule_class":
+        payload = d.get("reschedule_class", {})
+        return Action(
+            action_type=ActionType.RESCHEDULE_CLASS,
+            reschedule_class=RescheduleClassAction(**payload),
+        )
+    elif action_type == "remove_assignment":
+        payload = d.get("remove_assignment", {})
+        return Action(
+            action_type=ActionType.REMOVE_ASSIGNMENT,
+            remove_assignment=RemoveAssignmentAction(**payload),
+        )
+    else:
+        raise ValueError(f"Unknown action_type: {action_type}")
 
-    print("=" * 65)
-    print(f"  School Timetable Scheduling — OpenEnv Agent")
-    print(f"  Task:  {task_id.upper()}")
-    print(f"  Model: {model}")
-    print(f"  Time:  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 65)
 
-    # Setup
+def action_to_str(d: Dict) -> str:
+    """Convert action dict to a compact string for stdout."""
+    atype = d.get("action_type", "unknown")
+    if atype == "assign_class":
+        payload = d.get("assign_class", {})
+        return f"assign({payload.get('division_id','')},{payload.get('subject_id','')},{payload.get('slot_id','')})"
+    elif atype == "reschedule_class":
+        payload = d.get("reschedule_class", {})
+        return f"reschedule({payload.get('entry_id','')},{payload.get('new_slot_id','')})"
+    elif atype == "remove_assignment":
+        payload = d.get("remove_assignment", {})
+        return f"remove({payload.get('entry_id','')})"
+    return f"unknown({atype})"
+
+
+# ═══════════════════════════════════════════════════════════════
+# Run a single task
+# ═══════════════════════════════════════════════════════════════
+
+def run_single_task(task_id: str, agent: TimetableAgent) -> float:
+    """
+    Run inference for a single task with proper [START]/[STEP]/[END] format.
+    Returns the final grader score.
+    """
+    # [START]
+    print(f"[START] task={task_id} env={BENCHMARK} model={MODEL_NAME}", flush=True)
+
     task_cls = get_task(task_id)
     config = task_cls.get_config()
-    env = SchoolTimetableEnv(config, debug=debug)
-    agent = TimetableAgent(
-        api_key=api_key,
-        base_url=base_url,
-        model=model,
-        debug=debug,
-    )
+    env = SchoolTimetableEnv(config)
 
-    log_lines: List[str] = []
+    # Reset agent conversation for new task
+    agent.reset()
 
-    def log(msg: str):
-        print(msg)
-        log_lines.append(msg)
+    rewards: List[float] = []
+    step = 0
+    success = False
+    score = 0.0
 
-    # ── [START] ───────────────────────────────
-    log("\n[START]")
-    log(f"Task: {task_id} | Divisions: {len(config.divisions)} | "
-        f"Faculty: {len(config.faculty)} | Max steps: {config.max_steps}")
+    try:
+        obs = env.reset()
+        done = False
 
-    obs = env.reset()
-    done = False
-    step_rewards: List[float] = []
-    invalid_count = 0
-    valid_count = 0
+        while not done and step < config.max_steps:
+            obs_dict = obs.dict()
+            obs_text = agent.summarize_observation(obs_dict)
 
-    # ── Main Loop ─────────────────────────────
-    while not done:
-        obs_dict = obs.dict()
-        obs_text = agent.summarize_observation(obs_dict)
+            action_dict = agent.get_action(obs_text)
 
-        if debug:
-            print("\n--- Observation ---")
-            print(obs_text[:1000])
-            print("------------------")
+            if action_dict is None:
+                print(
+                    f"[STEP]  step={step+1} action=null"
+                    f" reward=0.00 done=false error=llm_failed",
+                    flush=True,
+                )
+                break
 
-        action = agent.get_action(obs_text)
+            try:
+                action = parse_action(action_dict)
+                action_str = action_to_str(action_dict)
+            except Exception as e:
+                error_msg = str(e)[:40].replace(" ", "_")
+                print(
+                    f"[STEP]  step={step+1} action=parse_error"
+                    f" reward=0.00 done=false error={error_msg}",
+                    flush=True,
+                )
+                continue
 
-        if action is None:
-            log(f"\n⚠️  Agent failed to produce a valid action at step {obs.step_count + 1}. Stopping.")
-            break
+            result = env.step(action)
+            step += 1
+            reward = result.reward
+            done = result.done
+            rewards.append(reward)
 
-        result = env.step(action)
+            # Check violations for error field
+            violations = result.info.get("violations", [])
+            error_str = "null"
+            if violations:
+                v = violations[0]
+                error_str = v.get("violation_type", "VIOLATION") if isinstance(v, dict) else str(v)
 
-        step_rewards.append(result.reward)
-        if result.info.get("valid", True):
-            valid_count += 1
-        else:
-            invalid_count += 1
-
-        # ── [STEP] ────────────────────────────
-        log(
-            f"\n[STEP {result.observation.step_count}] "
-            f"action={action.action_type} | "
-            f"valid={result.info.get('valid')} | "
-            f"reward={result.reward:+.3f} | "
-            f"completion={result.observation.progress.completion_percentage:.1f}%"
-        )
-
-        if debug:
-            rb = result.reward_breakdown
-            log(
-                f"  reward_breakdown: valid={rb.validity_bonus:+.2f} "
-                f"efficiency={rb.efficiency_bonus:+.2f} "
-                f"conflict={rb.conflict_penalty:+.2f} "
-                f"redundancy={rb.redundancy_penalty:+.2f}"
+            print(
+                f"[STEP]  step={step}"
+                f" action={action_str}"
+                f" reward={reward:.2f}"
+                f" done={str(done).lower()}"
+                f" error={error_str}",
+                flush=True,
             )
 
-        if result.info.get("violations"):
-            for v in result.info["violations"][:2]:
-                log(f"  ⚠️  {v.get('violation_type')}: {v.get('description')[:80]}")
+            obs = result.observation
 
-        obs = result.observation
-        done = result.done
+            if done:
+                completion = obs.progress.completion_percentage
+                success = completion == 100.0
+                break
 
-        if done:
-            break
+        # Compute grader score
+        score = task_cls.grade(env.get_entries())
 
-    # ── [END] ─────────────────────────────────
-    metrics = env.get_summary_metrics()
-    final_score = task_cls.grade(env.get_entries())
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
 
-    log("\n[END]")
-    log("=" * 65)
-    log(f"  Episode complete. Reason: {obs.termination_reason}")
-    log(f"  Steps taken       : {metrics['step_count']}")
-    log(f"  Valid actions     : {valid_count}")
-    log(f"  Invalid actions   : {invalid_count}")
-    log(f"  Sessions assigned : {metrics['total_entries']}")
-    log(f"  Completion        : {metrics['completion_percentage']:.1f}%")
-    log(f"  Total conflicts   : {metrics['total_conflicts']}")
-    log(f"  Cumul. reward     : {metrics['cumulative_reward']:+.4f}")
-    log(f"  ★ FINAL SCORE     : {final_score:.4f} / 1.0000")
-    log("=" * 65)
+    # [END]
+    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    print(
+        f"[END]   success={str(success).lower()}"
+        f" steps={step}"
+        f" score={score:.2f}"
+        f" rewards={rewards_str}",
+        flush=True,
+    )
 
-    # ── Export ────────────────────────────────
-    entries = env.get_entries()
-
-    if export_csv and entries:
-        log("\n📄 Exporting timetables...")
-        out_dir = f"timetables/{task_id}"
-        faculty_files = export_all_faculty_timetables_csv(entries, config, out_dir)
-        master_path = f"{out_dir}/master_timetable.csv"
-        export_master_timetable_csv(entries, config, master_path)
-        log(f"  ✓ Faculty CSVs: {out_dir}/")
-        log(f"  ✓ Master CSV:   {master_path}")
-
-        # Print a sample timetable
-        if config.faculty:
-            sample = config.faculty[0].name
-            log(f"\n📋 Sample timetable for {sample}:")
-            log(format_timetable_text(sample, entries, config))
-
-    # ── Save log ──────────────────────────────
-    if log_file:
-        with open(log_file, "w") as f:
-            f.write("\n".join(log_lines))
-        print(f"\n📝 Log saved to {log_file}")
-
-    return final_score
+    return score
 
 
 # ═══════════════════════════════════════════════════════════════
-# CLI Entry Point
+# Main — Run ALL tasks
 # ═══════════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="School Timetable Scheduling – OpenEnv LLM Agent"
-    )
-    parser.add_argument(
-        "--task",
-        choices=["easy", "medium", "hard"],
-        default="easy",
-        help="Task difficulty (default: easy)",
-    )
-    parser.add_argument(
-        "--model",
-        default=DEFAULT_MODEL,
-        help=f"LLM model name (default: {DEFAULT_MODEL})",
-    )
-    parser.add_argument(
-        "--base-url",
-        default=DEFAULT_BASE_URL,
-        help=f"API base URL (default: {DEFAULT_BASE_URL})",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging",
-    )
-    parser.add_argument(
-        "--export-csv",
-        action="store_true",
-        help="Export timetable CSVs after run",
-    )
-    parser.add_argument(
-        "--log-file",
-        default=None,
-        help="Path to save run log",
-    )
-    args = parser.parse_args()
+    if not API_KEY:
+        print("ERROR: No API key found. Set HF_TOKEN, API_KEY, or OPENAI_API_KEY.", file=sys.stderr)
+        sys.exit(1)
 
-    score = run_inference(
-        task_id=args.task,
-        model=args.model,
-        base_url=args.base_url,
-        debug=args.debug,
-        export_csv=args.export_csv,
-        log_file=args.log_file,
+    agent = TimetableAgent(
+        api_key=API_KEY,
+        base_url=API_BASE_URL,
+        model=MODEL_NAME,
+        temperature=TEMPERATURE,
     )
-    sys.exit(0 if score >= 0.8 else 1)
+
+    scores = {}
+    for task_id in ALL_TASKS:
+        score = run_single_task(task_id, agent)
+        scores[task_id] = score
+
+    # Summary to stderr (not parsed by validator)
+    print("\n--- Summary ---", file=sys.stderr)
+    for tid, sc in scores.items():
+        print(f"  {tid}: {sc:.4f}", file=sys.stderr)
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":
