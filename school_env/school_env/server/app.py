@@ -44,7 +44,7 @@ from fastapi import Request
 # ── Tasks endpoint ────────────────────────────────────────────
 @app.get("/tasks")
 def list_tasks():
-    """Return all tasks with grader scores — required by validator."""
+    """Return all tasks with grader information — required by validator."""
     from env.tasks import EasyTask, MediumTask, HardTask
     tasks = []
     for task_id, cls in [("easy", EasyTask), ("medium", MediumTask), ("hard", HardTask)]:
@@ -52,10 +52,19 @@ def list_tasks():
         tasks.append({
             "id": task_id,
             "description": cls.DESCRIPTION,
+            "grader": {
+                "enabled": True,
+                "function": f"env.tasks.{cls.__name__}.grade",
+                "callable": True,
+            },
             "score": score,
             "target_score": {"easy": 0.90, "medium": 0.80, "hard": 0.70}[task_id],
         })
-    return {"tasks": tasks}
+    return {
+        "tasks": tasks,
+        "total_tasks": len(tasks),
+        "tasks_with_graders": len(tasks),
+    }
 
 
 @app.post("/grade")
@@ -72,7 +81,33 @@ async def grade_task(request: Request):
         score = cls.grade(timetable)
     except Exception:
         score = cls.grade([])
-    return {"task": task_id, "score": score}
+    return {"task": task_id, "score": score, "grader_enabled": True}
+
+
+@app.post("/grader")
+async def grader_endpoint(request: Request):
+    """Alternative grader endpoint for OpenEnv validator compatibility."""
+    body = await request.json()
+    task_id = body.get("task", "easy")
+    entries = body.get("entries", [])
+    session_id = body.get("session_id")
+    
+    from env.tasks import EasyTask, MediumTask, HardTask
+    from env.models import TimetableEntry
+    cls = {"easy": EasyTask, "medium": MediumTask, "hard": HardTask}.get(task_id, EasyTask)
+    try:
+        timetable = [TimetableEntry(**e) for e in entries]
+        score = cls.grade(timetable)
+    except Exception:
+        score = cls.grade([])
+    
+    return {
+        "task": task_id,
+        "score": score,
+        "session_id": session_id,
+        "grader_enabled": True,
+        "grader_function": f"env.tasks.{cls.__name__}.grade",
+    }
 
 static_dir = Path(__file__).parent.parent / "static"
 if static_dir.exists():
