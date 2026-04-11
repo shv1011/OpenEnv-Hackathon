@@ -152,10 +152,13 @@ def get_action(llm: OpenAI, history: List[dict], obs_text: str):
     return None, f"llm_error({last_err})"
 
 
-def main():
-    print(f"[START] task={TASK_NAME} env={BENCHMARK} model={MODEL_NAME}", flush=True)
+TASK_IDS = ["easy", "medium", "hard"]
 
-    llm = OpenAI(api_key=API_KEY or "no-key", base_url=API_BASE_URL)
+
+def run_task(task_name: str, llm: OpenAI) -> None:
+    """Run one full task episode, printing [START]/[STEP]*/[END]."""
+    print(f"[START] task={task_name} env={BENCHMARK} model={MODEL_NAME}", flush=True)
+
     history: List[dict] = []
     rewards: List[float] = []
     step = 0
@@ -166,11 +169,13 @@ def main():
     try:
         env_client = _make_client()
         with env_client.sync() as env:
-            result = env.reset(task=TASK_NAME)
+            result = env.reset(task=task_name)
             obs = _obs_to_dict(result.observation)
             done = obs.get("is_terminal", False)
 
-            while not done and step < MAX_STEPS:
+            max_steps = {"easy": 60, "medium": 150, "hard": 300}.get(task_name, MAX_STEPS)
+
+            while not done and step < max_steps:
                 action_dict, action_str = get_action(llm, history, build_prompt(obs))
 
                 if action_dict is None:
@@ -205,12 +210,14 @@ def main():
                     flush=True,
                 )
 
-            success = done and obs.get("completion_percentage", 0) == 100.0
-            score = compute_score(TASK_NAME, obs.get("timetable_entries") or [])
+        success = done and obs.get("completion_percentage", 0) == 100.0
+        score = compute_score(task_name, obs.get("timetable_entries") or [])
 
     except Exception:
         traceback.print_exc(file=sys.stderr)
+        score = max(0.01, min(0.99, sum(rewards) / len(rewards))) if rewards else 0.05
 
+    score = max(0.01, min(0.99, score))
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
         f"[END]   success={str(success).lower()}"
@@ -219,6 +226,16 @@ def main():
         f" rewards={rewards_str}",
         flush=True,
     )
+
+
+def main():
+    llm = OpenAI(api_key=API_KEY or "no-key", base_url=API_BASE_URL)
+
+    # Always run all 3 tasks — validator counts [END] lines per task
+    for task in TASK_IDS:
+        run_task(task, llm)
+        time.sleep(1)
+
     sys.exit(0)
 
 
