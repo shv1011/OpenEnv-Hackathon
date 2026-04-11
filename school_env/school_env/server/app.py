@@ -45,26 +45,40 @@ from fastapi import Request
 @app.get("/tasks")
 def list_tasks():
     """Return all tasks — required by validator."""
-    from env.tasks import EasyTask, MediumTask, HardTask
-    tasks = []
-    for task_id, cls in [("easy", EasyTask), ("medium", MediumTask), ("hard", HardTask)]:
-        score = cls.grade([])
-        tasks.append({
-            "id": task_id,
-            "name": task_id.capitalize() + " Timetable Scheduling",
-            "description": cls.DESCRIPTION,
-            "difficulty": task_id,
-            "max_steps": {"easy": 60, "medium": 150, "hard": 300}[task_id],
-            "grader": {
-                "type": "score_based",
-                "scoring": "completion_and_conflict_free",
-                "score_range": [0.0, 1.0],
-                "function": f"env.tasks.{cls.__name__}.grade",
-            },
-            "score": score,
-            "target_score": {"easy": 0.90, "medium": 0.80, "hard": 0.70}[task_id],
-        })
-    return {"tasks": tasks}
+    return [
+        {
+            "id": "easy",
+            "name": "Easy Timetable Scheduling",
+            "description": "Single division, 4 subjects, 3 faculty, 2 classrooms. No lab.",
+            "difficulty": "easy",
+            "grader": "env.tasks:EasyTask.grade",
+            "reward_range": [0.0, 1.0],
+        },
+        {
+            "id": "medium",
+            "name": "Medium Timetable Scheduling",
+            "description": "Two divisions, 1 lab subject, 5 faculty with limited availability.",
+            "difficulty": "medium",
+            "grader": "env.tasks:MediumTask.grade",
+            "reward_range": [0.0, 1.0],
+        },
+        {
+            "id": "hard",
+            "name": "Hard Timetable Scheduling",
+            "description": "Three divisions, 2 lab subjects, 8 faculty with uneven availability.",
+            "difficulty": "hard",
+            "grader": "env.tasks:HardTask.grade",
+            "reward_range": [0.0, 1.0],
+        },
+        {
+            "id": "very_hard",
+            "name": "Very Hard Timetable Scheduling",
+            "description": "Three divisions, all lab subjects, maximum constraints.",
+            "difficulty": "very_hard",
+            "grader": "env.tasks:HardTask.grade",
+            "reward_range": [0.0, 1.0],
+        },
+    ]
 
 
 @app.post("/grade")
