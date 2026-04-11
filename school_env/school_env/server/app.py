@@ -38,7 +38,7 @@ app = create_app(
 # ── Mount the existing demo UI at /ui ─────────────────────────
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi import Request
 
 # ── Tasks endpoint ────────────────────────────────────────────
@@ -52,11 +52,7 @@ def list_tasks():
         tasks.append({
             "id": task_id,
             "description": cls.DESCRIPTION,
-            "grader": {
-                "enabled": True,
-                "function": f"env.tasks.{cls.__name__}.grade",
-                "callable": True,
-            },
+            "grader": f"env.tasks.{cls.__name__}.grade",
             "score": score,
             "target_score": {"easy": 0.90, "medium": 0.80, "hard": 0.70}[task_id],
         })
@@ -81,7 +77,7 @@ async def grade_task(request: Request):
         score = cls.grade(timetable)
     except Exception:
         score = cls.grade([])
-    return {"task": task_id, "score": score, "grader_enabled": True}
+    return {"task": task_id, "score": score}
 
 
 @app.post("/grader")
@@ -105,8 +101,7 @@ async def grader_endpoint(request: Request):
         "task": task_id,
         "score": score,
         "session_id": session_id,
-        "grader_enabled": True,
-        "grader_function": f"env.tasks.{cls.__name__}.grade",
+        "grader": f"env.tasks.{cls.__name__}.grade",
     }
 
 static_dir = Path(__file__).parent.parent / "static"
@@ -120,6 +115,15 @@ if static_dir.exists():
     @app.get("/ui/generate")
     def ui_generate():
         return FileResponse(str(static_dir / "index.html"))
+
+
+@app.get("/openenv.yaml")
+def serve_openenv_yaml():
+    """Serve openenv.yaml for validator compatibility."""
+    yaml_path = Path(__file__).parent.parent / "openenv.yaml"
+    if yaml_path.exists():
+        return PlainTextResponse(yaml_path.read_text(), media_type="text/yaml")
+    return PlainTextResponse("", status_code=404)
 
 
 if __name__ == "__main__":
